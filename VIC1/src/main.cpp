@@ -20,8 +20,10 @@
 
 void setup()
 {
+  // TODO setup all necessary systems
 }
 
 void loop()
 {
+  // TODO use tasking system to run all necessary tasks
 }
