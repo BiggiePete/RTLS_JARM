@@ -1,0 +1,8 @@
+[
+    {
+        "command": "\"C:\\Users\\Jebediah Kerman\\.platformio\\packages\\toolchain-gccarmnoneeabi@1.70201.0\\bin\\arm-none-eabi-g++.exe\" -o .pio\\build\\VIC1\\src\\main.o -c -fno-rtti -fno-exceptions -Os -ffunction-sections -fdata-sections -Wall -mthumb -mcpu=cortex-m4 -DF_CPU=100000000L -DPLATFORMIO=60118 -DSTM32F4 -DSTM32F411xE -Iinclude -Isrc src\\main.cpp",
+        "directory": "F:\\Desktop\\Projects\\RTLS_JARM\\VIC1",
+        "file": "src\\main.cpp",
+        "output": ".pio\\build\\VIC1\\src\\main.o"
+    }
+]
