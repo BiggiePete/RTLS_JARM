@@ -25,6 +25,26 @@ This project is for the development of a Return To Launch Site (RTLS) rocket, de
 - Improve sensor calibration, especially for magnetometer orientation.
 - Enhance data logging and telemetry for post-flight analysis.
 
+### Detailed TODOs
+
+- Set up scheduling system for getting sensor readings
+- Set up Kalman filtering system to filter readings, and provide better idea of state in terms of orientation and altitude
+- Set up PID controllers for the 4 motors
+- Set up scheduling system to update the "physics" of the rocket at either a set rate, or when data is available
+- Get temperature data
+- Get humidity data
+- Get GPS data
+- Get IMU data
+- Get Magnetometer data
+- Determine rotational offset of Magnetometer on the board in reference to the north direction
+- Set control flow for rocket in mode: IDLE, UP, CORRECTION, DESCENT
+- In IDLE mode, listen for rocket to be above 500ft & take GPS readings at high precision when the button is pressed
+- In UP mode, wait until altitude has descended over 3 datapoints before switching to CORRECTION
+- In CORRECTION mode, immediately get IMU readings at a good pace, and make all corrections necessary until the drone is within 10% of level flight, and within 10° of facing north, then switch to DESCENT mode
+- In DESCENT mode, use all measurement data to determine the PID levels necessary to control the rocket movements on the way down
+- If in DESCENT mode & below X ft, and the distance to the landing site is > X ft + OFFSET ft, deploy parachute, as the mission has become a failure
+- If in CORRECTION mode, and unable to make correction in under 15s, fire parachute method, as mission is a failure
+
 ## Expectations
 
 - The RTLS rocket will autonomously detect launch, stabilize itself, and attempt to return to the launch site.
