@@ -1,30 +1,52 @@
-# JARM (Junior Aerial Routing Method) / VIC1
+
+# RTLS_JARM VIC1
 
 ## Project Overview
 
-**JARM** (Junior Aerial Routing Method) is a Return To Launch Site (RTLS) rocket initiative focused on developing a reusable rocket system capable of autonomously returning to its launch location. The project utilizes the **VIC** (Vehicle in-Flight Controller) board, based on the STM32F411RET6 microcontroller, for real-time flight control, telemetry, and navigation. The VIC board interfaces with both IMU and GPS sensors to provide precise attitude and position data. JARM integrates hardware, embedded software, and advanced control algorithms to achieve reliable, safe, and repeatable rocket recovery.
+This project is for the development of a Return To Launch Site (RTLS) rocket, designed to autonomously return to its launch location after ascent. The system is built on an STM32 Nucleo F411RE board using the Arduino framework and integrates multiple sensors for navigation, control, and environmental monitoring.
 
 ## Features
 
-- Autonomous flight and RTLS navigation using the VIC board (STM32F411RET6)
-- Real-time telemetry, data logging, and diagnostics
-- Access to IMU and GPS information for accurate flight control
-- Reusable airframe and propulsion system
-- Modular architecture for rapid prototyping and upgrades
+- **Sensor Integration**: Reads data from temperature, humidity, GPS, IMU, and magnetometer sensors.
+- **Kalman Filtering**: Filters sensor readings to improve state estimation (orientation and altitude).
+- **PID Motor Control**: Controls four motors for flight stabilization and trajectory correction.
+- **Flight Modes**:
+  - **IDLE**: Waits for launch conditions and high-precision GPS readings.
+  - **UP**: Detects ascent and transitions to correction mode after apogee.
+  - **CORRECTION**: Actively stabilizes and orients the rocket for return.
+  - **DESCENT**: Controls descent and manages parachute deployment if needed.
+- **Failure Handling**: Deploys parachute if mission parameters are not met.
 
 ## Future Updates
 
-- Integration of advanced guidance and control algorithms
-- Enhanced telemetry and ground station communication
-- Improved landing precision and system robustness
-- Expanded documentation, tutorials, and user guides
+- Implement the full scheduling system for sensor readings and physics updates.
+- Complete Kalman filter and PID controller integration.
+- Add advanced failure detection and recovery logic.
+- Improve sensor calibration, especially for magnetometer orientation.
+- Enhance data logging and telemetry for post-flight analysis.
 
 ## Expectations
 
-- Achieve successful RTLS flights and recoveries
-- Gather and analyze flight data for iterative improvements
-- Encourage collaboration and learning in rocketry, embedded systems, and autonomous vehicles
+- The RTLS rocket will autonomously detect launch, stabilize itself, and attempt to return to the launch site.
+- The system will handle failures gracefully, deploying a parachute if safe return is not possible.
+- Ongoing development will focus on reliability, precision, and robust handling of real-world flight conditions.
 
 ---
 
-*Follow this project for ongoing updates, technical insights, and comprehensive documentation as JARM evolves!*
+Let me know if you want to add more technical details or specific instructions for contributors!
+
+## Libraries Used
+
+This project leverages several open-source libraries via PlatformIO to enable sensor integration, control, and scheduling:
+
+- **TaskScheduler**: Task scheduling for periodic sensor readings and control updates
+- **AHT20**: Temperature and humidity sensor driver
+- **XGZP6897D**: Barometric pressure sensor driver
+- **XENSIV 3D Magnetic Sensor TLx493D**: Magnetometer sensor driver
+- **ICM42688**: IMU (Inertial Measurement Unit) sensor driver
+- **UbxGps**: GPS module communication and parsing
+- **RC_ESC**: Electronic Speed Controller (ESC) interface for motor control
+- **PID**: Proportional-Integral-Derivative controller implementation for flight stabilization
+- **SimpleKalmanFilter**: Kalman filter for sensor data fusion and noise reduction
+
+All libraries are managed through the `platformio.ini` file for easy setup and reproducibility.
