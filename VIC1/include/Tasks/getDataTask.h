@@ -60,7 +60,6 @@ void getDataCallback()
   if (getDataTask.isFirstIteration())
   {
     Serial.println("Initializing all sensors...");
-    // TODO setup all necessary systems
     aht20.begin();
 
     mag.begin();
