@@ -3,8 +3,8 @@
 #include <Wire.h>
 #include "states.h"
 #include "Tasks/getDataTask.h"
-// #include "controlTask.h"
-// #include "communicationTask.h"
+#include "Tasks/refineDataTask.h"
+#include "Tasks/motorDrivesTask.h"
 #include "pins.h"
 
 Scheduler runner;
