@@ -20,6 +20,14 @@ void setup()
   Wire.setSCL(SCL_PIN);
   Wire.setSDA(SDA_PIN);
   Wire.begin();
+
+  runner.init();
+  runner.addTask(getDataTask);
+  runner.addTask(refineDataTask);
+  runner.addTask(motorDriveTask);
+
+  runner.enableAll();
+
   // TODO setup all necessary systems
 }
 
