@@ -10,6 +10,7 @@
             "includePath": [
                 "f:/Desktop/Projects/RTLS_JARM/VIC1/include",
                 "f:/Desktop/Projects/RTLS_JARM/VIC1/src",
+                "f:/Desktop/Projects/RTLS_JARM/VIC1/.pio/libdeps/VIC1/TLV493D-Magnetic-Sensor/src",
                 "f:/Desktop/Projects/RTLS_JARM/VIC1/.pio/libdeps/VIC1/SimpleKalmanFilter/src",
                 "f:/Desktop/Projects/RTLS_JARM/VIC1/.pio/libdeps/VIC1/PID",
                 "f:/Desktop/Projects/RTLS_JARM/VIC1/.pio/libdeps/VIC1/RC_ESC/src",
@@ -17,7 +18,6 @@
                 "f:/Desktop/Projects/RTLS_JARM/VIC1/.pio/libdeps/VIC1/UbxGps/include",
                 "f:/Desktop/Projects/RTLS_JARM/VIC1/.pio/libdeps/VIC1/UbxGps/src",
                 "f:/Desktop/Projects/RTLS_JARM/VIC1/.pio/libdeps/VIC1/ICM42688/src",
-                "f:/Desktop/Projects/RTLS_JARM/VIC1/.pio/libdeps/VIC1/XENSIV 3D Magnetic Sensor TLx493D/src",
                 "C:/Users/Jebediah Kerman/.platformio/packages/framework-arduinoststm32/libraries/SPI/src",
                 "f:/Desktop/Projects/RTLS_JARM/VIC1/.pio/libdeps/VIC1/XGZP6897D/src",
                 "f:/Desktop/Projects/RTLS_JARM/VIC1/.pio/libdeps/VIC1/AHT20/src",
@@ -63,6 +63,7 @@
                 "path": [
                     "f:/Desktop/Projects/RTLS_JARM/VIC1/include",
                     "f:/Desktop/Projects/RTLS_JARM/VIC1/src",
+                    "f:/Desktop/Projects/RTLS_JARM/VIC1/.pio/libdeps/VIC1/TLV493D-Magnetic-Sensor/src",
                     "f:/Desktop/Projects/RTLS_JARM/VIC1/.pio/libdeps/VIC1/SimpleKalmanFilter/src",
                     "f:/Desktop/Projects/RTLS_JARM/VIC1/.pio/libdeps/VIC1/PID",
                     "f:/Desktop/Projects/RTLS_JARM/VIC1/.pio/libdeps/VIC1/RC_ESC/src",
@@ -70,7 +71,6 @@
                     "f:/Desktop/Projects/RTLS_JARM/VIC1/.pio/libdeps/VIC1/UbxGps/include",
                     "f:/Desktop/Projects/RTLS_JARM/VIC1/.pio/libdeps/VIC1/UbxGps/src",
                     "f:/Desktop/Projects/RTLS_JARM/VIC1/.pio/libdeps/VIC1/ICM42688/src",
-                    "f:/Desktop/Projects/RTLS_JARM/VIC1/.pio/libdeps/VIC1/XENSIV 3D Magnetic Sensor TLx493D/src",
                     "C:/Users/Jebediah Kerman/.platformio/packages/framework-arduinoststm32/libraries/SPI/src",
                     "f:/Desktop/Projects/RTLS_JARM/VIC1/.pio/libdeps/VIC1/XGZP6897D/src",
                     "f:/Desktop/Projects/RTLS_JARM/VIC1/.pio/libdeps/VIC1/AHT20/src",

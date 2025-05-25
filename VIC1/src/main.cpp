@@ -2,6 +2,10 @@
 #include <TaskScheduler.h>
 #include <Wire.h>
 #include "states.h"
+#include "Tasks/getDataTask.h"
+// #include "controlTask.h"
+// #include "communicationTask.h"
+#include "pins.h"
 
 Scheduler runner;
 
@@ -9,6 +13,13 @@ State_e currentState = State_e::IDLE;
 
 void setup()
 {
+  Serial.setTx(TX_PIN);
+  Serial.setRx(RX_PIN);
+  Serial.begin(115200);
+  Serial.println("Hello World!");
+  Wire.setSCL(SCL_PIN);
+  Wire.setSDA(SDA_PIN);
+  Wire.begin();
   // TODO setup all necessary systems
 }
 
