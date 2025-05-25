@@ -5,13 +5,11 @@
 #include "refineDataTask.h"
 #include "ESC.h"
 #include "pins.h"
-#include "PID_v1.h"
 #include "states.h"
 
-extern State_e currentState;               // get state from main.cpp
-extern volatile refinedData_t refinedData; // get data from refineDataTask.h
+extern State_e currentState; // get state from main.cpp
 
-typedef struct motorDriveData
+typedef struct motorDriveData_t
 {
   float motorFL_PERCENT; // 0-1 of drive factor
   float motorFR_PERCENT;

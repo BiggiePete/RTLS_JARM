@@ -23,7 +23,7 @@ AHT20 aht20;
 ICM42688 IMU(Wire, 0x68);
 XGZP6897D pressure(K);
 
-using dataTaskData_t = struct dataTaskData
+using dataTaskData_t = struct dataTaskData_t
 {
   float temperature;
   float pressureTemperature;
