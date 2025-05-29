@@ -15,11 +15,11 @@ async fn main(_spawner: Spawner) {
     let mut led = Output::new(p.PB13, Level::High, Speed::Low);
 
     loop {
-        info!("high");
+        info!("Hello");
         led.set_high();
         Timer::after_millis(300).await;
 
-        info!("low");
+        info!("World");
         led.set_low();
         Timer::after_millis(300).await;
     }

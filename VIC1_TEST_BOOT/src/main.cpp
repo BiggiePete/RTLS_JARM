@@ -1,6 +1,6 @@
 #include <Arduino.h>
 
-HardwareSerial Serial_Debug(USART2);
+HardwareSerial Serial_Debug(PA15, PB3);
 
 void setup()
 {
