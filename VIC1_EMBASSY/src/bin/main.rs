@@ -108,6 +108,7 @@ async fn gather_data(
     let i2c_ref: RefCell<I2c<'static, Async>> = RefCell::new(i2c);
     // let mut aht = AHT20::new(&i2c_ref);
     let mut tlv4930d = Tlv493d::new(&i2c_ref, TLV493D_ADDR_HIGH);
+    // TODO: fix issue with magnetrometer initializing, but not making new readings, or reading only 0s, or being weird in general
     if let Err(e) = tlv4930d.init().await {
         info!(
             "TLV4930D initialization failed: {}",
