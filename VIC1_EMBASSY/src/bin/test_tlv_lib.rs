@@ -1,35 +1,21 @@
 #![no_std]
 #![no_main]
 
-#[path = "../aht20.rs"]
-mod aht20;
 use core::cell::RefCell;
-
-use crate::aht20::AHT20;
-
-#[path = "../GZP6816D.rs"]
-mod gz6816d;
-use crate::gz6816d::Gzp6816d;
-
-#[path = "../i2c_search.rs"]
-mod i2c_search;
-use crate::i2c_search::I2cScanner;
-
-#[path = "../TLV4930D_2.rs"]
-mod tlv4930d;
-use crate::tlv4930d::{PowerMode, TLV493D};
 
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_stm32::gpio::{Level, Output, Speed};
 use embassy_stm32::i2c::I2c;
 use embassy_stm32::mode::Async;
+use embassy_stm32::mode::Blocking;
 use embassy_stm32::time::Hertz;
 use embassy_stm32::usart::{Config, Uart};
 use embassy_stm32::{bind_interrupts, i2c, peripherals};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
-use embassy_time::{Delay, Duration, Timer};
+use embassy_time::{Duration, Timer};
+use sensor_tlv493d::Tlv493d;
 use {defmt_rtt as _, panic_probe as _};
 
 bind_interrupts!(struct Irqs {
@@ -65,15 +51,12 @@ async fn main(spawner: Spawner) {
     let mut i2c_config = embassy_stm32::i2c::Config::default();
     i2c_config.timeout = Duration::from_millis(100); // Set a 100ms timeout
 
-    let i2c = I2c::new(
+    let i2c_blocking = embassy_stm32::i2c::I2c::new_blocking(
         p.I2C1,
         p.PB6,
         p.PB7,
-        Irqs,
-        p.DMA1_CH6,
-        p.DMA1_CH0,
         Hertz(100_000),
-        i2c_config,
+        embassy_stm32::i2c::Config::default(),
     );
 
     debugLED1.set_low();
@@ -81,7 +64,7 @@ async fn main(spawner: Spawner) {
     debugLED3.set_low();
 
     spawner
-        .spawn(gather_data(i2c, debugLED1, debugLED2, debugLED3))
+        .spawn(gather_data(i2c_blocking, debugLED1, debugLED2, debugLED3))
         .unwrap();
 
     // let mut i2c = i2c::I2c::new_blocking(p.I2C1, p.PB6, p.PB7, Hertz(100_000), Default::default());
@@ -97,56 +80,30 @@ async fn main(spawner: Spawner) {
 
 #[embassy_executor::task]
 async fn gather_data(
-    i2c: embassy_stm32::i2c::I2c<'static, Async>, // Corrected Async mode path
+    i2c: embassy_stm32::i2c::I2c<'static, Blocking>,
     mut debug_led1: Output<'static>,
     mut debug_led2: Output<'static>,
     mut debug_led3: Output<'static>,
 ) {
     // DEVICE_DATA.send(DataMessage::Temperature(0.0)).await
-
-    // Initialize I2C devices
-    let mut i2c_ref: RefCell<I2c<'static, embassy_stm32::mode::Async>> = RefCell::new(i2c);
-
-    // Create a Delay instance. In Embassy, Delay is often obtained from a singleton
-    // or created if your HAL provides a way. For stm32, it's often `Delay`.
-    let mut delay_source = Delay; // embassy_time::Delay is a ZST and can be used directly
-
-    info!("Initializing TLV493D sensor...");
-
-    // Initialize the TLV493D sensor
-    // Use the i2c_ref, address, the delay source, and the soft reset flag.
-    // Setting perform_soft_reset_for_addr_select to false as pull-ups should set the address.
-    let mut tlv4930d = TLV493D::new(&mut i2c_ref, true);
-    match tlv4930d.init(PowerMode::MasterControlled).await {
-        Ok(_) => {
-            info!("TLV493D initialized successfully.");
-        }
-        Err(e) => {
-            error!("Failed to initialize TLV493D: {}", defmt::Debug2Format(&e));
-            // If initialization fails, we probably can't proceed with this sensor.
-        }
-    }
-    loop {
-        match tlv4930d.read().await {
-            Ok(sensor) => {
-                info!(
-                    "TLV493D reading: x: {}, y: {}, z: {}",
-                    sensor.bx_mt, sensor.by_mt, sensor.bz_mt
-                );
-            }
-            Err(e) => {
-                error!("Failed to initialize TLV493D: {}", defmt::Debug2Format(&e));
-                // If initialization fails, we probably can't proceed with this sensor.
-                // You might want to signal an error or panic.
-                // For this example, we'll just loop infinitely doing nothing with the sensor.
-                loop {
-                    debug_led1.set_high(); // Indicate error state
-                    Timer::after_millis(500).await;
-                    debug_led1.set_low();
-                    Timer::after_millis(500).await;
+    // Use the I2C instance directly with the sensor driver
+    match Tlv493d::new(i2c, 0x5E, sensor_tlv493d::Mode::Master) {
+        Ok(mut tlv) => loop {
+            match tlv.read_raw() {
+                Ok(r) => {
+                    info!(
+                        "TLV493D reading: x : {:?}, y : {:?}, z : {:?} , temperature: {:?}",
+                        r[0], r[1], r[2], r[3]
+                    );
+                }
+                Err(e) => {
+                    info!("Error reading TLV493D {:?}", Debug2Format(&e));
                 }
             }
-        };
-        Timer::after_secs(2).await;
+            Timer::after_secs(2).await;
+        },
+        Err(e) => {
+            info!("Error initializing TLV493D {:?}", Debug2Format(&e));
+        }
     }
 }
