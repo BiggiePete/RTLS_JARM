@@ -92,15 +92,15 @@ async fn gather_data(
             match tlv.read_raw() {
                 Ok(r) => {
                     info!(
-                        "TLV493D reading: x : {:?}, y : {:?}, z : {:?} , temperature: {:?}",
-                        r[0], r[1], r[2], r[3]
+                        "TLV493D reading: x : {:?}, y : {:?}, z : {:?}",
+                        r[0], r[1], r[2]
                     );
                 }
                 Err(e) => {
                     info!("Error reading TLV493D {:?}", Debug2Format(&e));
                 }
             }
-            Timer::after_secs(2).await;
+            Timer::after_micros(500).await;
         },
         Err(e) => {
             info!("Error initializing TLV493D {:?}", Debug2Format(&e));
