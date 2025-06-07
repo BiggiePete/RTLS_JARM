@@ -23,6 +23,10 @@ use crate::tlv4930d::TLV493D;
 mod icm42688;
 use crate::icm42688::{Icm42688p, ICM42688P_ADDR_AD0_LOW};
 
+#[path = "../gy271.rs"]
+mod gy271;
+use crate::gy271::GY271;
+
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_stm32::gpio::{Level, Output, Speed};
@@ -87,16 +91,6 @@ async fn main(spawner: Spawner) {
     spawner
         .spawn(gather_data(i2c, debugLED1, debugLED2, debugLED3))
         .unwrap();
-
-    // let mut i2c = i2c::I2c::new_blocking(p.I2C1, p.PB6, p.PB7, Hertz(100_000), Default::default());
-    // let mut aht = AHT20::new(i2c);
-    // let mut pressure_sensor = Gzp6816d::new(i2c);
-    // let scanner = I2cScanner::new();
-
-    // let scan_results = I2cScanner::scan_bus(&mut i2c);
-
-    // Print the results
-    // i2c_search::print_scan_results(&scan_results);
 }
 
 #[embassy_executor::task]
@@ -109,27 +103,36 @@ async fn gather_data(
     // DEVICE_DATA.send(DataMessage::Temperature(0.0)).await
     // initialize i2c devices
     let i2c_ref: RefCell<I2c<'static, Async>> = RefCell::new(i2c);
-    // let mut aht = AHT20::new(&i2c_ref);
-    let mut icm42688p = Icm42688p::new(&i2c_ref, ICM42688P_ADDR_AD0_LOW);
-    icm42688p.init().await.unwrap();
-
-    // tlv4930d.init(tlv4930d::PowerMode::MasterControlled);
-    // TODO: fix issue with magnetrometer initializing, but not making new readings, or reading only 0s, or being weird in general
-
-    // let mut pressure_sensor = Gzp6816d::new(&i2c_ref);
+    let mut gyz271 = GY271::new(&i2c_ref, 0x0D);
 
     loop {
-        match icm42688p.read_all_data().await {
-            Ok(d) => {
-                info!(
-                    "ICM42688P Data: Accel: ({}, {}, {}), Gyro: ({}, {}, {})",
-                    d.accel.x, d.accel.y, d.accel.z, d.gyro.x, d.gyro.y, d.gyro.z
-                );
+        match gyz271.init().await {
+            Ok(()) => {
+                info!("GY-271 initialized successfully!");
+                loop {
+                    match gyz271.read_magnetic_field().await {
+                        Ok((x, y, z)) => {
+                            info!("Mag Field: X={} G, Y={} G, Z={} G", x, y, z);
+
+                            // Example: Calculate heading (simple, assumes sensor is flat)
+                            // let heading_rad = libm::atan2(y as f64, x as f64);
+                            // let mut heading_deg = heading_rad * (180.0 / core::f64::consts::PI);
+                            // // Normalize to 0-360
+                            // if heading_deg < 0.0 {
+                            //     heading_deg += 360.0;
+                            // }
+                            // info!("Approx. Heading: {:.1}°", heading_deg);
+                        }
+                        Err(e) => {
+                            error!("Failed to read GY-271: {:?}", defmt::Debug2Format(&e));
+                        }
+                    }
+                    Timer::after(Duration::from_secs(1)).await;
+                }
             }
             Err(e) => {
-                info!("ICM42688P read error: {}", defmt::Debug2Format(&e));
+                error!("Failed to initialize GY-271: {:?}", defmt::Debug2Format(&e));
             }
         }
-        Timer::after_millis(1).await;
     }
 }

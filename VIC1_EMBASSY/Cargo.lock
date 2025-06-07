@@ -428,10 +428,12 @@ dependencies = [
  "embedded-storage",
  "futures-util",
  "heapless",
+ "libm",
  "micromath",
  "nb 1.1.0",
  "num-traits",
  "panic-probe",
+ "qmc5883l",
  "sensor-tlv493d",
  "static_cell",
  "usbd-hid",
@@ -728,9 +730,9 @@ checksum = "b9e0384b61958566e926dc50660321d12159025e767c18e043daf26b70104c39"
 
 [[package]]
 name = "libm"
-version = "0.2.11"
+version = "0.2.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8355be11b20d696c8f18f6cc018c4e372165b1fa8126cef092399c9951984ffa"
+checksum = "f9fbbcab51052fe104eb5e5d351cf728d30a5be1fe14d9be8a3b097481fb97de"
 
 [[package]]
 name = "litrs"
@@ -844,6 +846,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02b3e5e68a3a1a02aad3ec490a98007cbc13c37cbe84a3cd7b8e406d76e7f778"
 dependencies = [
  "unicode-ident",
+]
+
+[[package]]
+name = "qmc5883l"
+version = "0.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3c1eccef44c00b214bee71a965c661b1460867983f6dace5e8d506154a3cef2"
+dependencies = [
+ "embedded-hal 0.2.7",
 ]
 
 [[package]]

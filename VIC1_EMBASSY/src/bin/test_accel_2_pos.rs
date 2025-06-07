@@ -47,13 +47,13 @@ static DEVICE_DATA: Channel<CriticalSectionRawMutex, DataMessage, 2> = Channel::
 
 #[derive(Debug)]
 struct DataMessage {
-    temperature: f32,
-    humidity: f32,
-    pressure: f32,
-    gps: (f32, f32, f32),     // latitude, longitude, altitude
-    accel: (f32, f32, f32),   // x, y, z acceleration
-    gyro: (f32, f32, f32),    // x, y, z gyroscope
-    magnetometer: (f32, f32), // a,r magnetic field
+    temperature: Option<f32>,
+    humidity: Option<f32>,
+    pressure: Option<f32>,
+    gps: (Option<f32>, Option<f32>, Option<f32>), // latitude, longitude, altitude
+    accel: (Option<f32>, Option<f32>, Option<f32>), // x, y, z acceleration
+    gyro: (Option<f32>, Option<f32>, Option<f32>), // x, y, z gyroscope
+    magnetometer: (Option<f32>, Option<f32>),     // a,r magnetic field
 }
 
 #[embassy_executor::main]
@@ -87,7 +87,7 @@ async fn main(spawner: Spawner) {
     spawner
         .spawn(gather_data(i2c, debugLED1, debugLED2, debugLED3))
         .unwrap();
-
+    spawner.spawn(token)
     // let mut i2c = i2c::I2c::new_blocking(p.I2C1, p.PB6, p.PB7, Hertz(100_000), Default::default());
     // let mut aht = AHT20::new(i2c);
     // let mut pressure_sensor = Gzp6816d::new(i2c);
@@ -97,6 +97,19 @@ async fn main(spawner: Spawner) {
 
     // Print the results
     // i2c_search::print_scan_results(&scan_results);
+}
+
+#[embassy_executor::task]
+async fn process_state(
+    mut debug_led1: Output<'static>,
+    mut debug_led2: Output<'static>,
+    mut debug_led3: Output<'static>,
+) {
+    // This task will process the data received from the sensors
+    loop {
+        let data = DEVICE_DATA.receive().await;
+        if data.accel.0.is_some() && data.gyro.0.is_some() {}
+    }
 }
 
 #[embassy_executor::task]
@@ -125,11 +138,22 @@ async fn gather_data(
                     "ICM42688P Data: Accel: ({}, {}, {}), Gyro: ({}, {}, {})",
                     d.accel.x, d.accel.y, d.accel.z, d.gyro.x, d.gyro.y, d.gyro.z
                 );
+                DEVICE_DATA
+                    .send(DataMessage {
+                        temperature: None,
+                        humidity: None,
+                        pressure: None,
+                        gps: (None, None, None),
+                        accel: (Some(d.accel.x), Some(d.accel.y), Some(d.accel.z)),
+                        gyro: (Some(d.gyro.x), Some(d.gyro.y), Some(d.gyro.z)),
+                        magnetometer: (None, None),
+                    })
+                    .await;
             }
             Err(e) => {
                 info!("ICM42688P read error: {}", defmt::Debug2Format(&e));
             }
         }
-        Timer::after_millis(1).await;
+        Timer::after_millis(100).await;
     }
 }

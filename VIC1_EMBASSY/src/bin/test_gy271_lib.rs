@@ -27,13 +27,16 @@ use defmt::*;
 use embassy_executor::Spawner;
 use embassy_stm32::gpio::{Level, Output, Speed};
 use embassy_stm32::i2c::I2c;
-use embassy_stm32::mode::Async;
+use embassy_stm32::mode::{Async, Blocking};
 use embassy_stm32::time::Hertz;
 use embassy_stm32::usart::{Config, Uart};
 use embassy_stm32::{bind_interrupts, i2c, peripherals};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_time::{Duration, Timer};
+use libm::atan;
+use num_traits::abs;
+use qmc5883l::QMC5883L;
 use {defmt_rtt as _, panic_probe as _};
 
 bind_interrupts!(struct Irqs {
@@ -69,16 +72,7 @@ async fn main(spawner: Spawner) {
     let mut i2c_config = embassy_stm32::i2c::Config::default();
     i2c_config.timeout = Duration::from_millis(100); // Set a 100ms timeout
 
-    let i2c = I2c::new(
-        p.I2C1,
-        p.PB6,
-        p.PB7,
-        Irqs,
-        p.DMA1_CH6,
-        p.DMA1_CH0,
-        Hertz(100_000),
-        i2c_config,
-    );
+    let i2c = I2c::new_blocking(p.I2C1, p.PB6, p.PB7, Hertz(100_000), i2c_config);
 
     debugLED1.set_low();
     debugLED2.set_low();
@@ -87,49 +81,32 @@ async fn main(spawner: Spawner) {
     spawner
         .spawn(gather_data(i2c, debugLED1, debugLED2, debugLED3))
         .unwrap();
-
-    // let mut i2c = i2c::I2c::new_blocking(p.I2C1, p.PB6, p.PB7, Hertz(100_000), Default::default());
-    // let mut aht = AHT20::new(i2c);
-    // let mut pressure_sensor = Gzp6816d::new(i2c);
-    // let scanner = I2cScanner::new();
-
-    // let scan_results = I2cScanner::scan_bus(&mut i2c);
-
-    // Print the results
-    // i2c_search::print_scan_results(&scan_results);
 }
 
 #[embassy_executor::task]
 async fn gather_data(
-    i2c: embassy_stm32::i2c::I2c<'static, Async>,
+    i2c: embassy_stm32::i2c::I2c<'static, Blocking>,
     mut debug_led1: Output<'static>,
     mut debug_led2: Output<'static>,
     mut debug_led3: Output<'static>,
 ) {
     // DEVICE_DATA.send(DataMessage::Temperature(0.0)).await
     // initialize i2c devices
-    let i2c_ref: RefCell<I2c<'static, Async>> = RefCell::new(i2c);
-    // let mut aht = AHT20::new(&i2c_ref);
-    let mut icm42688p = Icm42688p::new(&i2c_ref, ICM42688P_ADDR_AD0_LOW);
-    icm42688p.init().await.unwrap();
-
-    // tlv4930d.init(tlv4930d::PowerMode::MasterControlled);
-    // TODO: fix issue with magnetrometer initializing, but not making new readings, or reading only 0s, or being weird in general
-
-    // let mut pressure_sensor = Gzp6816d::new(&i2c_ref);
+    // let i2c_ref: RefCell<I2c<'static, Async>> = RefCell::new(i2c);
+    let mut mag = QMC5883L::new(i2c).expect("Failed to initialize QMC5883L magnetometer");
+    mag.continuous().unwrap();
 
     loop {
-        match icm42688p.read_all_data().await {
-            Ok(d) => {
-                info!(
-                    "ICM42688P Data: Accel: ({}, {}, {}), Gyro: ({}, {}, {})",
-                    d.accel.x, d.accel.y, d.accel.z, d.gyro.x, d.gyro.y, d.gyro.z
-                );
+        match mag.mag() {
+            Ok((x, y, z)) => {
+                // info!("Mag Field: X={} G, Y={} G, Z={} G", x, y, z);
+                let dir = atan(y as f64 / x as f64) * (y / abs(y)) as f64;
+                info!("Direction: {} radians", dir);
             }
             Err(e) => {
-                info!("ICM42688P read error: {}", defmt::Debug2Format(&e));
+                error!("Failed to read QMC5883L: {:?}", defmt::Debug2Format(&e));
             }
         }
-        Timer::after_millis(1).await;
+        Timer::after(Duration::from_secs(1)).await;
     }
 }
