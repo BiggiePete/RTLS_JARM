@@ -37,12 +37,12 @@ chrono = { version = "^0.4", default-features = false}
 sensor-tlv493d = {version = "0.1.0", default_features = false }
 qmc5883l = "0.0.1"
 libm = "0.2.15"
+rust-ekf = { path = "./rust-ekf" }
 
 [dependencies.num-traits]
 version = "0.2"
 default-features = false
 features = ["libm"]    # <--- Uncomment if you wish to use `Float` and `Real` without `std`
-
 
 [profile.release]
 debug = 2
