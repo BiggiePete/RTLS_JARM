@@ -1,15 +1,12 @@
 #![no_std]
 
 use defmt::println;
-use libm::{acos, asin, atan2, copysign, cos, fabs, sin, sqrt};
+use libm::{atan2f, cosf, fabsf, sinf, sqrtf};
 
 // --- Unit Conversion Constants ---
-/// Standard gravity in m/s^2.
-pub const G_STANDARD: f64 = 9.80665;
-/// Conversion factor from degrees to radians.
-pub const DEG_TO_RAD: f64 = core::f64::consts::PI / 180.0;
-/// Conversion factor from radians to degrees.
-pub const RAD_TO_DEG: f64 = 180.0 / core::f64::consts::PI;
+const G_TO_MS2: f64 = 9.80665;
+const DEG_TO_RAD: f64 = core::f64::consts::PI / 180.0;
+const RAD_TO_DEG: f64 = 180.0 / core::f64::consts::PI;
 
 /// High-precision 3D vector using f64 for maximum precision
 #[derive(Clone, Copy, Debug)]
@@ -29,7 +26,7 @@ impl Vec3 {
     }
 
     pub fn magnitude(&self) -> f64 {
-        sqrt(self.x * self.x + self.y * self.y + self.z * self.z)
+        libm::sqrt(self.x * self.x + self.y * self.y + self.z * self.z)
     }
 
     pub fn normalize(&self) -> Self {
@@ -93,10 +90,10 @@ impl Quaternion {
         Self::new(1.0, 0.0, 0.0, 0.0)
     }
 
-    pub fn from_axis_angle(axis: Vec3, angle_rad: f64) -> Self {
-        let half_angle = angle_rad * 0.5;
-        let sin_half = sin(half_angle);
-        let cos_half = cos(half_angle);
+    pub fn from_axis_angle(axis: Vec3, angle: f64) -> Self {
+        let half_angle = angle * 0.5;
+        let sin_half = libm::sin(half_angle);
+        let cos_half = libm::cos(half_angle);
         let normalized_axis = axis.normalize();
 
         Self::new(
@@ -118,7 +115,7 @@ impl Quaternion {
         if dot < -0.999999 {
             // Find an orthogonal vector
             let mut orthogonal = Vec3::new(1.0, 0.0, 0.0);
-            if fabs(from_norm.x) > 0.9 {
+            if libm::fabs(from_norm.x) > 0.9 {
                 orthogonal = Vec3::new(0.0, 1.0, 0.0);
             }
             let axis = from_norm.cross(&orthogonal).normalize();
@@ -131,13 +128,13 @@ impl Quaternion {
         }
 
         let axis = from_norm.cross(&to_norm);
-        let angle = acos(dot.clamp(-1.0, 1.0));
+        let angle = libm::acos(dot.clamp(-1.0, 1.0));
 
         Self::from_axis_angle(axis, angle)
     }
 
     pub fn normalize(&self) -> Self {
-        let mag = sqrt(self.w * self.w + self.x * self.x + self.y * self.y + self.z * self.z);
+        let mag = libm::sqrt(self.w * self.w + self.x * self.x + self.y * self.y + self.z * self.z);
         if mag > 1e-12 {
             Self::new(self.w / mag, self.x / mag, self.y / mag, self.z / mag)
         } else {
@@ -155,6 +152,7 @@ impl Quaternion {
     }
 
     pub fn rotate_vector(&self, v: Vec3) -> Vec3 {
+        // Quaternion rotation: q * v * q^-1
         let qv = Quaternion::new(0.0, v.x, v.y, v.z);
         let q_conj = Quaternion::new(self.w, -self.x, -self.y, -self.z);
         let temp = self.multiply(&qv);
@@ -162,32 +160,27 @@ impl Quaternion {
         Vec3::new(result.x, result.y, result.z)
     }
 
-    /// Convert quaternion to Euler angles (roll, pitch, yaw) in degrees.
+    /// Convert to Euler angles (roll, pitch, yaw) in radians
     pub fn to_euler(&self) -> Vec3 {
-        // Calculate angles in radians first
-        let roll_rad = atan2(
+        // Convert to Euler angles (roll, pitch, yaw)
+        let roll = libm::atan2(
             2.0 * (self.w * self.x + self.y * self.z),
             1.0 - 2.0 * (self.x * self.x + self.y * self.y),
         );
 
         let sin_pitch = 2.0 * (self.w * self.y - self.z * self.x);
-        let pitch_rad = if fabs(sin_pitch) >= 1.0 {
-            copysign(core::f64::consts::PI / 2.0, sin_pitch)
+        let pitch = if libm::fabs(sin_pitch) >= 1.0 {
+            libm::copysign(core::f64::consts::PI / 2.0, sin_pitch)
         } else {
-            asin(sin_pitch)
+            libm::asin(sin_pitch)
         };
 
-        let yaw_rad = atan2(
+        let yaw = libm::atan2(
             2.0 * (self.w * self.z + self.x * self.y),
             1.0 - 2.0 * (self.y * self.y + self.z * self.z),
         );
 
-        // Convert radians to degrees
-        Vec3::new(
-            roll_rad * RAD_TO_DEG,
-            pitch_rad * RAD_TO_DEG,
-            yaw_rad * RAD_TO_DEG,
-        )
+        Vec3::new(roll, pitch, yaw)
     }
 }
 
@@ -208,16 +201,17 @@ impl NavigationState {
 }
 
 /// Complementary filter parameters for sensor fusion
+#[derive(Clone)]
 pub struct FilterParams {
     pub accel_weight: f64,     // Weight for accelerometer in orientation estimation
     pub gyro_bias_alpha: f64,  // Low-pass filter coefficient for gyro bias estimation
-    pub accel_threshold: f64, // Threshold to detect if device is in free-fall or high acceleration (in m/s²)
+    pub accel_threshold: f64,  // Threshold to detect if device is in free-fall or high acceleration
     pub velocity_damping: f64, // Damping factor for velocity drift compensation
     pub position_damping: f64, // Damping factor for position drift compensation
-    pub stationary_threshold: f64, // Threshold for detecting stationary state (in m/s²)
+    pub stationary_threshold: f64, // Threshold to detect stationary state
     pub bias_learning_rate: f64, // Learning rate for bias estimation
     pub calibration_samples: u32, // Number of samples for initial calibration
-    pub calibration_stability_threshold: f64, // Stability threshold for calibration (in m/s²)
+    pub calibration_stability_threshold: f64, // Stability threshold for calibration
 }
 
 impl Default for FilterParams {
@@ -225,10 +219,10 @@ impl Default for FilterParams {
         Self {
             accel_weight: 0.05,        // 5% accelerometer, 95% gyroscope for orientation
             gyro_bias_alpha: 0.002,    // Faster bias adaptation
-            accel_threshold: 2.0,      // Lower threshold for better stationary detection (m/s²)
+            accel_threshold: 2.0,      // Lower threshold for better stationary detection (in m/s²)
             velocity_damping: 0.98,    // Strong velocity damping
             position_damping: 0.99,    // Moderate position damping
-            stationary_threshold: 0.5, // Threshold for detecting stationary state (m/s²)
+            stationary_threshold: 0.5, // Threshold for detecting stationary state (in m/s²)
             bias_learning_rate: 0.01,  // Faster bias learning
             calibration_samples: 50,   // Take 50 samples for calibration
             calibration_stability_threshold: 0.1, // Accelerometer readings should be stable within 0.1 m/s²
@@ -246,24 +240,39 @@ pub enum CalibrationState {
 
 /// Main inertial navigation system
 pub struct InertialNavigator {
+    // State variables
     orientation: Quaternion,
     velocity: Vec3,
     position: Vec3,
+
+    // Bias estimation (internal units: m/s² and rad/s)
     gyro_bias: Vec3,
     accel_bias: Vec3,
+
+    // Previous values for integration
     prev_accel_world: Vec3,
+
+    // Filter parameters
     params: FilterParams,
+
+    // Gravity vector in world frame
     gravity: Vec3,
+
+    // Stationary detection
     stationary_counter: u32,
     motion_detected: bool,
+
+    // Bias estimation helpers
     accel_history: [Vec3; 10],
     gyro_history: [Vec3; 10],
     history_index: usize,
     history_full: bool,
+
+    // Calibration state
     calibration_state: CalibrationState,
-    calibration_samples: Vec3,
+    calibration_samples: Vec3, // Accumulated accelerometer readings
     calibration_count: u32,
-    calibration_variance: Vec3,
+    calibration_variance: Vec3, // Track variance for stability detection
     calibration_mean: Vec3,
 }
 
@@ -281,7 +290,7 @@ impl InertialNavigator {
             accel_bias: Vec3::zero(),
             prev_accel_world: Vec3::zero(),
             params,
-            gravity: Vec3::new(0.0, 0.0, -G_STANDARD), // Standard gravity in m/s²
+            gravity: Vec3::new(0.0, 0.0, -G_TO_MS2), // Standard gravity in m/s²
             stationary_counter: 0,
             motion_detected: false,
             accel_history: [Vec3::zero(); 10],
@@ -296,59 +305,72 @@ impl InertialNavigator {
         }
     }
 
-    /// Update the navigation state with new sensor data.
+    /// Update the navigation state with new sensor data
     ///
     /// # Arguments
-    /// * `accel_g` - Accelerometer data in Gs (1 G = 9.80665 m/s²) (body frame).
-    /// * `gyro_dps` - Gyroscope data in degrees/s (body frame).
-    /// * `dt` - Time delta in seconds.
-    pub fn update(&mut self, accel_g: Vec3, gyro_dps: Vec3, dt: f64) {
+    /// * `accel_g` - Accelerometer data in G's (body frame)
+    /// * `gyro_deg` - Gyroscope data in degrees/s (body frame)
+    /// * `dt` - Time delta in seconds
+    pub fn update(&mut self, accel_g: Vec3, gyro_deg: Vec3, dt: f64) {
         if dt <= 0.0 {
             return;
         }
 
-        // Convert inputs to standard units (m/s^2 and rad/s) for all internal calculations.
-        let accel = accel_g * G_STANDARD;
-        let gyro = gyro_dps * DEG_TO_RAD;
+        // Convert inputs from G's and degrees/s to m/s² and rad/s for internal use
+        let accel = accel_g * G_TO_MS2;
+        let gyro = gyro_deg * DEG_TO_RAD;
 
-        // Handle initial calibration phase.
+        // Handle initial calibration phase
         if self.calibration_state != CalibrationState::Complete {
             self.update_calibration(accel, gyro);
             return; // Don't process navigation until calibrated
         }
 
+        // Store sensor history for better bias estimation
         self.update_sensor_history(accel, gyro);
+
+        // Detect if device is stationary
         let is_stationary = self.detect_stationary_state(accel, gyro);
+
+        // Enhanced bias estimation
         self.update_bias_estimation_enhanced(accel, gyro, dt, is_stationary);
 
         let corrected_gyro = gyro - self.gyro_bias;
         let corrected_accel = accel - self.accel_bias;
 
+        // Update orientation using gyroscope (high frequency, low noise)
         self.update_orientation_gyro(corrected_gyro, dt);
 
+        // Correct orientation using accelerometer (low frequency, high noise but absolute)
         if self.should_use_accelerometer(&corrected_accel) {
             self.correct_orientation_accel(corrected_accel);
         }
 
+        // Transform acceleration to world frame and remove gravity
         let accel_world = self.orientation.rotate_vector(corrected_accel) - self.gravity;
 
+        // Apply zero velocity updates when stationary
         if is_stationary {
             self.apply_zero_velocity_update();
         } else {
+            // Update velocity and position using enhanced integration
             self.update_velocity_position_enhanced(accel_world, dt);
         }
 
         self.prev_accel_world = accel_world;
     }
 
+    /// Check if the navigator is calibrated and ready for navigation
     pub fn is_calibrated(&self) -> bool {
         self.calibration_state == CalibrationState::Complete
     }
 
+    /// Get current calibration state
     pub fn get_calibration_state(&self) -> CalibrationState {
         self.calibration_state
     }
 
+    /// Force recalibration (useful if device orientation changes significantly)
     pub fn recalibrate(&mut self) {
         self.calibration_state = CalibrationState::WaitingForStability;
         self.calibration_samples = Vec3::zero();
@@ -362,6 +384,7 @@ impl InertialNavigator {
     fn update_calibration(&mut self, accel: Vec3, gyro: Vec3) {
         match self.calibration_state {
             CalibrationState::WaitingForStability => {
+                // Check if readings are stable enough to start calibration
                 if self.is_stable_for_calibration(accel, gyro) {
                     self.calibration_state = CalibrationState::Calibrating;
                     self.calibration_samples = Vec3::zero();
@@ -370,9 +393,11 @@ impl InertialNavigator {
                 }
             }
             CalibrationState::Calibrating => {
+                // Accumulate samples for average
                 self.calibration_samples = self.calibration_samples + accel;
                 self.calibration_count += 1;
 
+                // Update running mean and variance for stability checking
                 let delta = accel - self.calibration_mean;
                 self.calibration_mean =
                     self.calibration_mean + delta * (1.0 / self.calibration_count as f64);
@@ -380,86 +405,90 @@ impl InertialNavigator {
                 self.calibration_variance = self.calibration_variance
                     + Vec3::new(delta.x * delta2.x, delta.y * delta2.y, delta.z * delta2.z);
 
+                // Check if we have enough samples
                 if self.calibration_count >= self.params.calibration_samples {
                     self.finalize_calibration();
                 }
             }
-            CalibrationState::Complete => {}
+            CalibrationState::Complete => {
+                // Already calibrated, nothing to do
+            }
         }
     }
 
     fn is_stable_for_calibration(&self, accel: Vec3, gyro: Vec3) -> bool {
-        // Inputs are already in m/s² and rad/s.
-        let near_gravity = fabs(accel.magnitude() - G_STANDARD) < 0.5;
-        // Check if gyroscope readings are low (not rotating). 0.1 rad/s is ~5.7 deg/s.
-        let low_rotation = gyro.magnitude() < 0.1;
-        println!(
-            "is low_rotation: {}, is near_gravity: {}, {} , {}",
-            low_rotation,
-            near_gravity,
-            gyro.magnitude(),
-            fabs(accel.magnitude() - G_STANDARD)
-        );
+        // Check if accelerometer magnitude is close to gravity (device is stationary)
+        let accel_magnitude = accel.magnitude();
+        let near_gravity = libm::fabs(accel_magnitude - G_TO_MS2) < 0.5;
+
+        // Check if gyroscope readings are low (not rotating)
+        let low_rotation = gyro.magnitude() < 0.05; // ~2.8 degrees/second
+
         near_gravity && low_rotation
     }
 
     fn finalize_calibration(&mut self) {
+        // Calculate average accelerometer reading during calibration
         let avg_accel = self.calibration_samples * (1.0 / self.calibration_count as f64);
-        let measured_gravity_body = avg_accel.normalize() * -G_STANDARD;
-        let expected_gravity_world = Vec3::new(0.0, 0.0, -G_STANDARD);
 
+        // This average represents the gravity vector in the device's current orientation
+        let measured_gravity_body = avg_accel.normalize() * -G_TO_MS2; // Flip because accel opposes gravity
+        let expected_gravity_world = Vec3::new(0.0, 0.0, -G_TO_MS2);
+
+        // Calculate the quaternion that rotates from the expected world gravity
+        // to the measured body gravity
         self.orientation =
             Quaternion::from_two_vectors(expected_gravity_world, measured_gravity_body);
 
-        let magnitude_error = avg_accel.magnitude() - G_STANDARD;
+        // Set initial accelerometer bias based on the difference between measured and expected magnitude
+        let magnitude_error = avg_accel.magnitude() - G_TO_MS2;
         self.accel_bias = avg_accel.normalize() * magnitude_error;
 
+        // Initialize gyro bias to the current gyro reading (assuming stationary)
+        // This will be refined during operation
+
         self.calibration_state = CalibrationState::Complete;
+
+        // Reset other state variables
         self.velocity = Vec3::zero();
         self.position = Vec3::zero();
         self.prev_accel_world = Vec3::zero();
     }
 
+    /// Get current navigation state with rotation in degrees
     pub fn get_state(&self) -> NavigationState {
+        // Convert Euler angles from radians (internal) to degrees (output)
+        let euler_rad = self.orientation.to_euler();
+        let euler_deg = euler_rad * RAD_TO_DEG;
+
         NavigationState {
             position: self.position,
-            rotation: self.orientation.to_euler(),
+            rotation: euler_deg,
         }
     }
 
     pub fn reset(&mut self) {
-        self.orientation = Quaternion::identity();
-        self.velocity = Vec3::zero();
-        self.position = Vec3::zero();
-        self.gyro_bias = Vec3::zero();
-        self.accel_bias = Vec3::zero();
-        self.prev_accel_world = Vec3::zero();
-        self.stationary_counter = 0;
-        self.motion_detected = false;
-        self.accel_history = [Vec3::zero(); 10];
-        self.gyro_history = [Vec3::zero(); 10];
-        self.history_index = 0;
-        self.history_full = false;
-        self.recalibrate();
+        *self = Self::with_params(self.params.clone());
     }
 
+    /// Set initial position
     pub fn set_position(&mut self, position: Vec3) {
         self.position = position;
     }
 
-    /// Set initial orientation from Euler angles in degrees (only works after calibration).
+    /// Set initial orientation from Euler angles in degrees (only works after calibration)
     pub fn set_orientation(&mut self, euler_deg: Vec3) {
         if self.calibration_state == CalibrationState::Complete {
-            // Convert input degrees to radians for quaternion calculation.
-            let euler = euler_deg * DEG_TO_RAD;
+            // Convert input from degrees to radians for internal calculation
+            let euler_rad = euler_deg * DEG_TO_RAD;
 
-            // Convert Euler to quaternion (ZYX order).
-            let cy = cos(euler.z * 0.5);
-            let sy = sin(euler.z * 0.5);
-            let cp = cos(euler.y * 0.5);
-            let sp = sin(euler.y * 0.5);
-            let cr = cos(euler.x * 0.5);
-            let sr = sin(euler.x * 0.5);
+            // Convert Euler to quaternion (ZYX order)
+            let cy = libm::cos(euler_rad.z * 0.5);
+            let sy = libm::sin(euler_rad.z * 0.5);
+            let cp = libm::cos(euler_rad.y * 0.5);
+            let sp = libm::sin(euler_rad.y * 0.5);
+            let cr = libm::cos(euler_rad.x * 0.5);
+            let sr = libm::sin(euler_rad.x * 0.5);
 
             self.orientation = Quaternion::new(
                 cr * cp * cy + sr * sp * sy,
@@ -480,12 +509,13 @@ impl InertialNavigator {
     }
 
     fn detect_stationary_state(&mut self, accel: Vec3, gyro: Vec3) -> bool {
-        // Inputs are already in m/s² and rad/s.
         let accel_magnitude = accel.magnitude();
         let gyro_magnitude = gyro.magnitude();
 
-        let near_gravity = fabs(accel_magnitude - G_STANDARD) < self.params.stationary_threshold;
-        let low_rotation = gyro_magnitude < 0.05; // ~3 degrees/second
+        // Check if acceleration is close to gravity and gyro is low
+        let near_gravity =
+            libm::fabs(accel_magnitude - G_TO_MS2) < self.params.stationary_threshold;
+        let low_rotation = gyro_magnitude < 0.05; // ~2.8 degrees/second
 
         if near_gravity && low_rotation {
             self.stationary_counter += 1;
@@ -494,6 +524,7 @@ impl InertialNavigator {
             self.motion_detected = true;
         }
 
+        // Consider stationary after 10 consecutive stationary readings
         self.stationary_counter > 10
     }
 
@@ -505,21 +536,22 @@ impl InertialNavigator {
         is_stationary: bool,
     ) {
         if !self.history_full {
-            return;
+            return; // Need some history first
         }
 
+        // Enhanced accelerometer bias estimation
         let accel_magnitude = accel.magnitude();
-        let expected_gravity = G_STANDARD;
+        let expected_gravity = G_TO_MS2;
 
         let accel_learning_rate = if is_stationary {
             self.params.bias_learning_rate * 2.0
-        } else if fabs(accel_magnitude - expected_gravity) < 1.0 {
+        } else if libm::fabs(accel_magnitude - expected_gravity) < 1.0 {
             self.params.bias_learning_rate
         } else {
             self.params.bias_learning_rate * 0.1
         };
 
-        if fabs(accel_magnitude - expected_gravity) < 2.0 {
+        if libm::fabs(accel_magnitude - expected_gravity) < 2.0 {
             let gravity_body = self.orientation.rotate_vector(self.gravity * -1.0);
             let accel_error = accel - gravity_body;
             self.accel_bias = self.accel_bias + accel_error * (accel_learning_rate * dt);
@@ -566,7 +598,6 @@ impl InertialNavigator {
         self.velocity = (self.velocity + avg_accel * dt) * self.params.velocity_damping;
         let avg_velocity = self.velocity - avg_accel * (dt * 0.5);
         self.position = self.position + avg_velocity * dt;
-
         if avg_accel.magnitude() < 0.05 {
             self.velocity = self.velocity * 0.95;
         }
@@ -581,15 +612,15 @@ impl InertialNavigator {
     }
 
     fn should_use_accelerometer(&self, accel: &Vec3) -> bool {
-        fabs(accel.magnitude() - G_STANDARD) < self.params.accel_threshold
+        let accel_magnitude = accel.magnitude();
+        libm::fabs(accel_magnitude - G_TO_MS2) < self.params.accel_threshold
     }
 
     fn correct_orientation_accel(&mut self, accel: Vec3) {
         let accel_normalized = (accel * -1.0).normalize();
         let current_down = self.orientation.rotate_vector(Vec3::new(0.0, 0.0, -1.0));
         let correction_axis = current_down.cross(&accel_normalized);
-        let correction_angle = acos(current_down.dot(&accel_normalized).clamp(-1.0, 1.0));
-
+        let correction_angle = libm::acos(current_down.dot(&accel_normalized).clamp(-1.0, 1.0));
         if correction_axis.magnitude() > 1e-12 && correction_angle > 1e-6 {
             let correction_quat = Quaternion::from_axis_angle(
                 correction_axis,
@@ -599,22 +630,29 @@ impl InertialNavigator {
         }
     }
 
+    /// Get current estimated sensor biases for debugging (accel_bias in G's, gyro_bias in deg/s)
     pub fn get_biases(&self) -> (Vec3, Vec3) {
-        (self.accel_bias, self.gyro_bias)
+        let accel_bias_g = self.accel_bias * (1.0 / G_TO_MS2);
+        let gyro_bias_deg = self.gyro_bias * RAD_TO_DEG;
+        (accel_bias_g, gyro_bias_deg)
     }
 
-    pub fn set_biases(&mut self, accel_bias: Vec3, gyro_bias: Vec3) {
-        self.accel_bias = accel_bias;
-        self.gyro_bias = gyro_bias;
+    /// Manually set sensor biases if known (accel_bias in G's, gyro_bias in deg/s)
+    pub fn set_biases(&mut self, accel_bias_g: Vec3, gyro_bias_deg: Vec3) {
+        self.accel_bias = accel_bias_g * G_TO_MS2;
+        self.gyro_bias = gyro_bias_deg * DEG_TO_RAD;
     }
 
+    /// Force a zero velocity update (useful when you know the device is stationary)
     pub fn force_zero_velocity_update(&mut self) {
         self.velocity = Vec3::zero();
-        self.stationary_counter = 100;
+        self.stationary_counter = 100; // Mark as stationary
     }
 
+    /// Get the current gravity vector as measured by the device, in G's
     pub fn get_measured_gravity_body(&self) -> Vec3 {
-        self.orientation.rotate_vector(self.gravity * -1.0)
+        let gravity_ms2 = self.orientation.rotate_vector(self.gravity * -1.0);
+        gravity_ms2 * (1.0 / G_TO_MS2)
     }
 }
 
