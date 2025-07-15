@@ -3,13 +3,11 @@
 
 #[path = "../aht20.rs"]
 mod aht20;
-use core::cell::RefCell;
-
 use crate::aht20::AHT20;
 
-#[path = "../GZP6816D.rs"]
+#[path = "../GZP6816D_2.rs"]
 mod gz6816d;
-use crate::gz6816d::Gzp6816d;
+use crate::gz6816d::GZP6816D;
 
 #[path = "../i2c_search.rs"]
 mod i2c_search;
@@ -23,6 +21,7 @@ use crate::tlv4930d::TLV493D;
 mod icm42688;
 use crate::icm42688::{Icm42688p, ICM42688P_ADDR_AD0_LOW};
 
+use core::cell::RefCell;
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_stm32::gpio::{Level, Output, Speed};
@@ -85,34 +84,30 @@ async fn gather_data(
     mut debug_led2: Output<'static>,
     mut debug_led3: Output<'static>,
 ) {
-    debug_led1.set_high();
-    Timer::after_millis(50).await;
-    info!("gather_data task started. LED1 should be ON.");
-
     let i2c_ref: RefCell<I2c<'static, Async>> = RefCell::new(i2c);
+    let mut sensor = GZP6816D::new(&i2c_ref);
 
-    let mut gz6816d_sensor = Gzp6816d::new(&i2c_ref);
-    info!("Gzp6816d instance created.");
+    match sensor.read_status().await {
+        Ok(status) => {
+            info!("Sensor status: {}", Debug2Format(&status));
+        }
+        Err(e) => {
+            error!("Error reading sensor status: {}", Debug2Format(&e));
+        }
+    }
+    info!("Starting altitude readings...");
 
     loop {
-        info!("Attempting to read GZP6816D...");
-        debug_led2.set_high(); // Turn on LED2 before reading
-        match gz6816d_sensor.get_pressure_temperature().await {
-            Ok((pressure, temperature)) => {
-                info!("Pressure: {} Pa, Temperature: {} C", pressure, temperature);
-                debug_led2.set_low(); // Turn off LED2 after successful read
-                if debug_led3.is_set_high() {
-                    // Turn off LED3 (error LED) if it was on
-                    debug_led3.set_low();
-                }
+        Timer::after_secs(2).await;
+        match sensor.read_altitude_m().await {
+            Ok(altitude) => {
+                info!("Altitude: {=f32} m", altitude);
+                debug_led1.toggle();
             }
             Err(e) => {
-                error!("Failed to read GZP6816D: {:?}", e);
-                debug_led2.set_low(); // Turn off LED2
-                debug_led3.set_high(); // Turn on LED3 to indicate error
+                error!("Error reading altitude: {}", Debug2Format(&e));
+                debug_led2.toggle();
             }
         }
-        info!("Waiting 2 seconds...");
-        Timer::after_secs(2).await;
     }
 }

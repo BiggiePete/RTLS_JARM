@@ -47,6 +47,7 @@ async fn main(spawner: Spawner) {
     let mut debugLED1 = Output::new(p.PB15, Level::High, Speed::Low);
     let mut debugLED2 = Output::new(p.PB14, Level::High, Speed::Low);
     let mut debugLED3 = Output::new(p.PB13, Level::High, Speed::Low);
+    let mut powerSelect = Output::new(p.PB12, Level::High, Speed::Low);
 
     let mut i2c_config = embassy_stm32::i2c::Config::default();
     i2c_config.timeout = Duration::from_millis(100); // Set a 100ms timeout
@@ -91,7 +92,7 @@ async fn gather_data(
         Ok(mut tlv) => loop {
             match tlv.read_raw() {
                 Ok(r) => {
-                    info!(
+                    println!(
                         "TLV493D reading: x : {:?}, y : {:?}, z : {:?}",
                         r[0], r[1], r[2]
                     );

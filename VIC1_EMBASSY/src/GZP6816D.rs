@@ -4,7 +4,7 @@ use core::cell::RefCell;
 use defmt::*; // Make sure defmt is in scope for info!, error!, warn!
 use embassy_stm32::i2c::{Error as I2cError, I2c as Stm32I2c};
 use embassy_stm32::mode::Async;
-use embassy_time::{Duration, Timer};
+use embassy_time::{Duration, Timer, WithTimeout};
 
 const GZP6816D_I2C_ADDRESS: u8 = 0x78;
 const CMD_GET_CAL: u8 = 0xAC;

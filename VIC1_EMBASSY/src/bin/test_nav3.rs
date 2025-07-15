@@ -131,20 +131,21 @@ async fn gather_data(
                 dt = (now.as_micros() - curr_time.as_micros()) as f64 / 1_000_000.0; // calculate delta time in seconds
                 curr_time = now; // update current time
                 let (accel, gyro) = (
-                    Vec3::new(
-                        (d.accel.x * 9.81) as f64,
-                        (d.accel.y * 9.81) as f64,
-                        (d.accel.z * 9.81) as f64,
-                    ),
+                    Vec3::new((d.accel.x) as f64, (d.accel.y) as f64, (d.accel.z) as f64),
                     Vec3::new(d.gyro.x as f64, d.gyro.y as f64, d.gyro.z as f64),
                 );
                 println!("dt: {}", dt);
                 nav.update(accel, gyro, dt);
+                // nav.force_zero_velocity_update();
 
                 match nav.get_calibration_state() {
                     CalibrationState::WaitingForStability => {
                         // Device needs to be stationary
-                        println!("Please keep device still for calibration...");
+                        println!(
+                            "Please keep device still for calibration... {} {}",
+                            defmt::Debug2Format(&accel),
+                            defmt::Debug2Format(&gyro)
+                        );
                     }
                     CalibrationState::Calibrating => {
                         // Taking samples
@@ -161,6 +162,7 @@ async fn gather_data(
             }
         }
     }
+    println!("begin!!");
     loop {
         match icm42688p.read_all_data().await {
             Ok(d) => {
@@ -175,9 +177,8 @@ async fn gather_data(
                     dt,
                 );
                 let state = nav.get_state();
-                nav.force_zero_velocity_update();
 
-                info!(
+                println!(
                     "[{:?} {:?} {:?} {:?} {:?} {:?}]",
                     state.position.x,
                     state.position.y,

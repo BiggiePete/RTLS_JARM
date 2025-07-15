@@ -359,13 +359,13 @@ where
 
     // Helper to get a bit field from a buffer (typically self.read_regs)
     fn get_bits_from_buffer(&self, reg_mask_index: usize, buffer: &[u8]) -> u8 {
-        let mask_def = ®MASKS[reg_mask_index];
+        let mask_def = MASKS[reg_mask_index];
         (buffer[mask_def.byte_addr] & mask_def.bit_mask) >> mask_def.shift
     }
 
     // Helper to set a bit field in a buffer (typically self.write_regs)
     fn set_bits_in_buffer(&self, reg_mask_index: usize, data: u8, buffer: &mut [u8]) {
-        let mask_def = ®MASKS[reg_mask_index];
+        let mask_def = MASKS[reg_mask_index];
         let current_byte_val = buffer[mask_def.byte_addr];
         // Clear the bits in the field, then OR with the new data shifted into place
         let new_byte_val = (current_byte_val & !mask_def.bit_mask)

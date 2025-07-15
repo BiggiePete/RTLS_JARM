@@ -35,7 +35,6 @@ async fn main(_spawner: Spawner) {
     // Initialize I2C for AHT20 and GZP6816D sensors
     let mut i2c = I2c::new_blocking(p.I2C1, p.PB6, p.PB7, Hertz(100_000), Default::default());
     // let  aht = AHT20::new(&mut i2c);
-    let mut pressure_sensor = Gzp6816d::new(i2c);
     // let scanner = I2cScanner::new();
 
     // let scan_results = I2cScanner::scan_bus(&mut i2c);
@@ -53,23 +52,5 @@ async fn main(_spawner: Spawner) {
         debugLED2.set_high();
         debugLED3.set_high();
         Timer::after(Duration::from_millis(1000)).await;
-
-        // match aht.read() {
-        //     Ok((t, h)) => {
-        //         info!("Temperature: {:?} , Humidity: {:?}", t, h);
-        //     }
-        //     Err(_e) => {
-        //         warn!("Error reading AHT20 sensor");
-        //     }
-        // }
-
-        match pressure_sensor.read_calibrated_data() {
-            Ok((temp, pressure)) => {
-                info!("Temperature: {:?}°C, Pressure: {:?} Pa", temp, pressure);
-            }
-            Err(e) => {
-                error!("Failed to read GZP6816D sensor: {:?}", e);
-            }
-        }
     }
 }
