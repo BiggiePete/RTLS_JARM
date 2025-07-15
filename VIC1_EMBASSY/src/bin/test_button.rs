@@ -66,12 +66,13 @@ async fn main(spawner: Spawner) {
 
     button.wait_for_low().await; // Wait for button press
 
-    spawner.spawn(gather_data(button)).unwrap();
     spawner.spawn(blink(debug_led3)).unwrap();
+    spawner.spawn(gather_data(button)).unwrap();
 }
 
 #[embassy_executor::task]
 async fn blink(mut debug_led3: Output<'static>) {
+    info!("Blinking LED3");
     loop {
         debug_led3.set_high();
         Timer::after_secs(2).await;
@@ -82,6 +83,7 @@ async fn blink(mut debug_led3: Output<'static>) {
 
 #[embassy_executor::task]
 async fn gather_data(mut button: ExtiInput<'static>) {
+    info!("waiting on button");
     loop {
         button.wait_for_low().await;
         // Read sensor data and send it through the channel
