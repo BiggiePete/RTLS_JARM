@@ -2,17 +2,6 @@
 #![no_main]
 
 // --- Unchanged peripheral definitions from your starter ---
-#[path = "../aht20.rs"]
-mod aht20;
-use crate::aht20::AHT20;
-
-#[path = "../GZP6816D.rs"]
-mod gz6816d;
-use crate::gz6816d::Gzp6816d;
-
-#[path = "../i2c_search.rs"]
-mod i2c_search;
-use crate::i2c_search::I2cScanner;
 // ---
 
 use defmt::*;
@@ -20,7 +9,7 @@ use embassy_executor::Spawner;
 use embassy_stm32::gpio::{Level, Output, OutputType, Speed};
 use embassy_stm32::time::hz;
 use embassy_stm32::timer::simple_pwm::{PwmPin, SimplePwm};
-use embassy_time::{Duration, Timer};
+use embassy_time::Timer;
 use {defmt_rtt as _, panic_probe as _};
 
 // Define standard ESC pulse widths in microseconds
@@ -34,8 +23,8 @@ async fn main(_spawner: Spawner) {
     let p = embassy_stm32::init(Default::default());
     info!("Hello World! from JARM Flight Controller");
 
-    let mut debugLED1 = Output::new(p.PB15, Level::Low, Speed::Low);
-    let mut power_select = Output::new(p.PB12, Level::High, Speed::Low);
+    let mut debug_led1 = Output::new(p.PB15, Level::Low, Speed::Low);
+    let _power_select = Output::new(p.PB12, Level::High, Speed::Low);
 
     // --- Initialize PWM ---
     // Note: The specific pins for TIM1 channels are MCU-dependent.
@@ -126,7 +115,7 @@ async fn main(_spawner: Spawner) {
     // The motor will continue to spin at 10%.
     // The main loop will now just blink the LED to show the MCU is alive.
     loop {
-        debugLED1.toggle();
+        debug_led1.toggle();
         Timer::after_millis(500).await;
     }
 }

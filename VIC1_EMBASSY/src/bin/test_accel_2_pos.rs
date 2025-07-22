@@ -87,7 +87,7 @@ async fn main(spawner: Spawner) {
     spawner
         .spawn(gather_data(i2c, debugLED1, debugLED2, debugLED3))
         .unwrap();
-    spawner.spawn(token)
+    // spawner.spawn(token)
     // let mut i2c = i2c::I2c::new_blocking(p.I2C1, p.PB6, p.PB7, Hertz(100_000), Default::default());
     // let mut aht = AHT20::new(i2c);
     // let mut pressure_sensor = Gzp6816d::new(i2c);

@@ -3,6 +3,7 @@ edition = "2021"
 name = "embassy-stm32f4-examples"
 version = "0.1.0"
 license = "MIT OR Apache-2.0"
+autobins = true
 
 [dependencies]
 # Change stm32f429zi to your chip name, if necessary.
@@ -39,6 +40,10 @@ qmc5883l = "0.0.1"
 libm = "0.2.15"
 rust-ekf = { path = "./rust-ekf" }
 
+
+[dev-dependencies]
+defmt-test = "0.4.0"
+
 [dependencies.num-traits]
 version = "0.2"
 default-features = false
@@ -46,3 +51,77 @@ features = ["libm"]    # <--- Uncomment if you wish to use `Float` and `Real` wi
 
 [profile.release]
 debug = 2
+
+
+
+[[bin]]
+name = "main"
+harness = false
+
+[[bin]]
+name = "test_accel_2_pos"
+harness = false
+
+[[bin]]
+name = "test_button"
+harness = false
+
+[[bin]]
+name = "test_ekf"
+harness = false
+
+[[bin]]
+name = "test_gps"
+harness = false
+
+[[bin]]
+name = "test_gy271"
+harness = false
+
+[[bin]]
+name = "test_gy271_lib"
+harness = false
+
+[[bin]]
+name = "test_gzp"
+harness = false
+
+[[bin]]
+name = "test_gzp2"
+harness = false
+
+[[bin]]
+name = "test_i2c_scan"
+harness = false
+
+[[bin]]
+name = "test_icm"
+harness = false
+
+[[bin]]
+name = "test_nav"
+harness = false
+
+[[bin]]
+name = "test_nav2"
+harness = false
+
+[[bin]]
+name = "test_nav3"
+harness = false
+
+[[bin]]
+name = "test_pwm"
+harness = false
+
+[[bin]]
+name = "test_tlv"
+harness = false
+
+[[bin]]
+name = "test_tlv_lib"
+harness = false
+
+[[test]]
+name = "tests" # You can name this whatever you want
+harness = false # Also important!
