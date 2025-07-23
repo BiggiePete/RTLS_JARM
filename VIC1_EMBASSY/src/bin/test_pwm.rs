@@ -1,14 +1,12 @@
 #![no_std]
 #![no_main]
 
-// --- Unchanged peripheral definitions from your starter ---
-// ---
-
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_stm32::gpio::{Level, Output, OutputType, Speed};
 use embassy_stm32::time::hz;
 use embassy_stm32::timer::simple_pwm::{PwmPin, SimplePwm};
+
 use embassy_time::Timer;
 use {defmt_rtt as _, panic_probe as _};
 

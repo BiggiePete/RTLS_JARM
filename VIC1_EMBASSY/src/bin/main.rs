@@ -22,6 +22,22 @@ use embassy_stm32::time::Hertz;
 use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
 
+// so what we should do here is set up a system of tasks, the tasks likely have the ability to do something on their first run, then do something else in loop
+// we will use messages and message queues, to determine the state of the system, so we can have a queue called I2C data, that has the acceleration data, the gyro, and the mag,
+// we can then also have another channel called gps
+// and another channel called motor_sig, where we update the motor signals, like how much drive should be going to the motor, but we also need to set up a 3 state system
+
+// setup
+// launch / ascent
+// descent / landing
+
+// the setup stage should blink the LEDs, initialize the motors, and start gathering information about the current GPS location
+// the launch and scent stages can only be activated after the button has been pressed in the setup stage.
+// in the launch stage, we will track our current altitude and wait until our altitude is > 300ft && over the last 3 readings, our altitude has been decreasing, once this is true, we move to descent
+// in the descent stage, we will track our current altitude and attempt to correct for the descent speed, we will initially though, prepare the system by spinning up all the motors for 5 seconds to full power, following this, we will then attempt to correct for our current YAW PITCH ROLL, by trying to become level. once we are level, we can use the mag data to attempt to point north. once we are within 5deg of north, we can begin the descent phase, where we will attempt to monitor and control our descent speed, and maintain a mostly level flight profile, if we need to angle ourselves, it will be in the direction that puts us closer to the landing site, but we will tilt no more than 15deg over the minimum required to break wind.
+
+// we will do all of this while sending back data messages back to the main server over LoRa, and maintaining comms, allowing the user to change settings about the launch, and choose to do different things if necessary.
+
 #[embassy_executor::main]
 async fn main(_spawner: Spawner) {
     let p = embassy_stm32::init(Default::default());
