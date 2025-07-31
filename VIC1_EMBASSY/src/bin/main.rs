@@ -44,29 +44,37 @@ async fn main(_spawner: Spawner) {
     info!("Hello World! from JARM");
     // lets initialize all of the components necessary for runtime
 
-    let mut debugLED1 = Output::new(p.PB15, Level::High, Speed::Low);
-    let mut debugLED2 = Output::new(p.PB14, Level::High, Speed::Low);
-    let mut debugLED3 = Output::new(p.PB13, Level::High, Speed::Low);
+    let mut debug_led1 = Output::new(p.PB15, Level::High, Speed::Low);
+    let mut debug_led2 = Output::new(p.PB14, Level::High, Speed::Low);
+    let mut debug_led3 = Output::new(p.PB13, Level::High, Speed::Low);
 
     // Initialize I2C for AHT20 and GZP6816D sensors
     let mut i2c = I2c::new_blocking(p.I2C1, p.PB6, p.PB7, Hertz(100_000), Default::default());
     // let  aht = AHT20::new(&mut i2c);
     // let scanner = I2cScanner::new();
 
+    match i2c.blocking_read(0x47, &mut [0; 1]) {
+        Ok(data) => {
+            info!("Read data: {:?}", data);
+        }
+        Err(e) => {
+            error!("Failed to read I2C data: {}", e);
+        }
+    }
     // let scan_results = I2cScanner::scan_bus(&mut i2c);
 
     // Print the results
     // i2c_search::print_scan_results(&scan_results);
 
     loop {
-        debugLED1.set_low();
-        debugLED2.set_low();
-        debugLED3.set_low();
+        debug_led1.set_low();
+        debug_led2.set_low();
+        debug_led3.set_low();
         Timer::after(Duration::from_millis(1000)).await;
 
-        debugLED1.set_high();
-        debugLED2.set_high();
-        debugLED3.set_high();
+        debug_led1.set_high();
+        debug_led2.set_high();
+        debug_led3.set_high();
         Timer::after(Duration::from_millis(1000)).await;
     }
 }
