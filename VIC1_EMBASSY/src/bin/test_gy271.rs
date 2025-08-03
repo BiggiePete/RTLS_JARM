@@ -38,6 +38,16 @@ use embassy_stm32::{bind_interrupts, i2c, peripherals};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_time::{Duration, Timer};
+use libm::{atan2, floor};
+
+// Define PI for calculations, as it's not always in scope in `no_std`
+const PI: f64 = core::f64::consts::PI;
+
+// Define the 16 cardinal directions, starting from North and going clockwise.
+const DIRECTIONS: [&str; 16] = [
+    "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW",
+    "NNW",
+];
 use {defmt_rtt as _, panic_probe as _};
 
 bind_interrupts!(struct Irqs {
@@ -103,36 +113,38 @@ async fn gather_data(
     // DEVICE_DATA.send(DataMessage::Temperature(0.0)).await
     // initialize i2c devices
     let i2c_ref: RefCell<I2c<'static, Async>> = RefCell::new(i2c);
-    let mut gyz271 = GY271::new(&i2c_ref, 0x0D);
+    let mut gy271 = GY271::new(&i2c_ref)
+        .await
+        .expect("Failed to initialize GY-271");
+    info!("GY-271 instance created.");
+    gy271
+        .continuous()
+        .await
+        .expect("Failed to set GY-271 to continuous mode");
 
     loop {
-        match gyz271.init().await {
-            Ok(()) => {
-                info!("GY-271 initialized successfully!");
-                loop {
-                    match gyz271.read_magnetic_field().await {
-                        Ok((x, y, z)) => {
-                            info!("Mag Field: X={} G, Y={} G, Z={} G", x, y, z);
+        info!("Attempting to read GY-271...");
+        debug_led2.set_high(); // Turn on LED2 before reading
+        match gy271.mag().await {
+            Ok((x, y, _z)) => {
+                let angle_rad = atan2(y as f64, x as f64);
 
-                            // Example: Calculate heading (simple, assumes sensor is flat)
-                            // let heading_rad = libm::atan2(y as f64, x as f64);
-                            // let mut heading_deg = heading_rad * (180.0 / core::f64::consts::PI);
-                            // // Normalize to 0-360
-                            // if heading_deg < 0.0 {
-                            //     heading_deg += 360.0;
-                            // }
-                            // info!("Approx. Heading: {:.1}°", heading_deg);
-                        }
-                        Err(e) => {
-                            error!("Failed to read GY-271: {:?}", defmt::Debug2Format(&e));
-                        }
-                    }
-                    Timer::after(Duration::from_secs(1)).await;
+                let mut angle_deg = (angle_rad * (180.0 / PI)) - 70.0;
+
+                if angle_deg < 0.0 {
+                    angle_deg += 360.0;
                 }
+                let direction_index = floor((angle_deg + 11.25) / 22.5) as usize % 16;
+                let direction_str = DIRECTIONS[direction_index];
+
+                // 5. Print the angle in degrees and the 3-letter cardinal direction.
+                info!("Angle: {:?}°, Direction: {:?}", angle_deg, direction_str);
             }
             Err(e) => {
-                error!("Failed to initialize GY-271: {:?}", defmt::Debug2Format(&e));
+                error!("Failed to read GY271: {:?}", defmt::Debug2Format(&e));
             }
         }
+        debug_led2.set_low(); // Turn off LED2 after reading
+        Timer::after(Duration::from_secs(1)).await;
     }
 }
