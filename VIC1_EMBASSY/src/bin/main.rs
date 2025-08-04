@@ -71,10 +71,10 @@ async fn main(spawner: Spawner) {
     info!("Hello World! from JARM");
     // lets initialize all of the components necessary for runtime
 
-    let mut debug_led1 = Output::new(p.PB15, Level::High, Speed::Low);
-    let mut debug_led2 = Output::new(p.PB14, Level::High, Speed::Low);
-    let mut debug_led3 = Output::new(p.PB13, Level::High, Speed::Low);
-    let mut power_select = Output::new(p.PB12, Level::High, Speed::Low);
+    let debug_led1 = Output::new(p.PB15, Level::High, Speed::Low);
+    let debug_led2 = Output::new(p.PB14, Level::High, Speed::Low);
+    let debug_led3 = Output::new(p.PB13, Level::High, Speed::Low);
+    let _power_select = Output::new(p.PB12, Level::High, Speed::Low);
 
     // Initialize I2C for sensors
     let mut i2c_config = embassy_stm32::i2c::Config::default();
@@ -96,4 +96,7 @@ async fn main(spawner: Spawner) {
 
     spawner.spawn(gather_i2c_data(i2c)).unwrap();
     spawner.spawn(gather_gps_data(uart_rx)).unwrap();
+    spawner
+        .spawn(led_task::led_task(debug_led1, debug_led2, debug_led3))
+        .unwrap();
 }
