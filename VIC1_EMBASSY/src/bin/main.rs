@@ -33,13 +33,16 @@ use embassy_time::{Duration, Instant, Timer};
 use libm::atan2;
 use {defmt_rtt as _, panic_probe as _};
 
-#[path = "./tasks/get_i2c.rs"]
-mod get_i2c;
-use crate::get_i2c::gather_i2c_data;
+#[path = "./tasks/get_i2c_task.rs"]
+mod get_i2c_task;
+use crate::get_i2c_task::gather_i2c_data;
 
-#[path = "./tasks/get_gps.rs"]
-mod get_gps;
-use crate::get_gps::gather_gps_data;
+#[path = "./tasks/get_gps_task.rs"]
+mod get_gps_task;
+use crate::get_gps_task::gather_gps_data;
+
+#[path = "./tasks/led_task.rs"]
+mod led_task;
 
 // so what we should do here is set up a system of tasks, the tasks likely have the ability to do something on their first run, then do something else in loop
 // we will use messages and message queues, to determine the state of the system, so we can have a queue called I2C data, that has the acceleration data, the gyro, and the mag,
@@ -90,12 +93,7 @@ async fn main(spawner: Spawner) {
 
     let uart_config = embassy_stm32::usart::Config::default(); // Set baud rate etc.
     let uart_rx = UartRx::new(p.USART2, Irqs, p.PA3, p.DMA1_CH5, uart_config).unwrap();
-    let _ = uart_rx.set_baudrate(9600);
 
-    spawner
-        .spawn(gather_i2c_data(i2c, debug_led1, debug_led2, debug_led3))
-        .unwrap();
-    spawner
-        .spawn(gather_gps_data(uart_rx, debug_led1, debug_led2, debug_led3))
-        .unwrap();
+    spawner.spawn(gather_i2c_data(i2c)).unwrap();
+    spawner.spawn(gather_gps_data(uart_rx)).unwrap();
 }

@@ -4,6 +4,7 @@ use crate::aht20::AHT20;
 
 #[path = "../../icm42688.rs"]
 mod icm42688;
+use crate::get_i2c_task::led_task::LED_DATA;
 use crate::icm42688::{Icm42688p, ICM42688P_ADDR_AD0_LOW};
 
 #[path = "../../inertial_navigator2.rs"]
@@ -14,8 +15,11 @@ use crate::inertial::{CalibrationState, InertialNavigator, Vec3};
 mod gy271;
 use crate::gy271::GY271;
 
+#[path = "./led_task.rs"]
+mod led_task;
+
 #[derive(Debug)]
-struct DataMessageI2C {
+pub struct DataMessageI2C {
     temperature: f32,
     humidity: f32,
     // pressure: f32,
@@ -29,42 +33,21 @@ struct DataMessageI2C {
     gyro_ready: bool,
 }
 
-static DEVICE_DATA_I2C: Channel<CriticalSectionRawMutex, DataMessageI2C, 2> = Channel::new();
+pub static DEVICE_DATA_I2C: Channel<CriticalSectionRawMutex, DataMessageI2C, 2> = Channel::new();
 
 use core::cell::RefCell;
 use core::f64::consts::PI;
 use defmt::*;
-use embassy_executor::Spawner;
-use embassy_stm32::gpio::{Level, Output, Speed};
 use embassy_stm32::i2c::I2c;
 use embassy_stm32::mode::Async;
-use embassy_stm32::time::Hertz;
-use embassy_stm32::usart::UartRx;
-use embassy_stm32::{bind_interrupts, i2c, peripherals, usart};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
-use embassy_time::{Duration, Instant, Timer};
+use embassy_time::Instant;
 use libm::atan2;
 use {defmt_rtt as _, panic_probe as _};
 
 #[embassy_executor::task]
-pub async fn gather_i2c_data(
-    i2c: embassy_stm32::i2c::I2c<'static, Async>,
-    mut debug_led1: Output<'static>,
-    mut debug_led2: Output<'static>,
-    mut debug_led3: Output<'static>,
-) {
-    let mut message = DataMessageI2C {
-        temperature: 0.0,
-        humidity: 0.0,
-        position: (0.0, 0.0, 0.0), // x, y, z position, likely incorrect, but fed from the accelerometer
-        rotation: (0.0, 0.0, 0.0), // x, y, z rotation
-        direction: 0.0,
-        aht_ready: false,
-        mag_ready: false,
-        gyro_ready: false,
-    };
-
+pub async fn gather_i2c_data(i2c: embassy_stm32::i2c::I2c<'static, Async>) {
     // DEVICE_DATA.send(DataMessage::Temperature(0.0)).await
     // initialize i2c devices
     let i2c_ref: RefCell<I2c<'static, Async>> = RefCell::new(i2c);
@@ -85,7 +68,7 @@ pub async fn gather_i2c_data(
     info!("I2C devices initialized.");
 
     let mut curr_time = Instant::now(); // get current time in seconds
-    let mut dt = 0 as f64; // init var
+    let mut dt;
 
     let mut nav = InertialNavigator::new();
 
@@ -112,6 +95,13 @@ pub async fn gather_i2c_data(
                     CalibrationState::WaitingForStability => {
                         // Device needs to be stationary
                         println!("Please keep device still for calibration...");
+                        let _ = LED_DATA
+                            .send(led_task::LedMessage {
+                                debug_led1: Some(led_task::LedState::On),
+                                debug_led2: None,
+                                debug_led3: None,
+                            })
+                            .await;
                     }
                     CalibrationState::Calibrating => {
                         // Taking samples
@@ -128,7 +118,24 @@ pub async fn gather_i2c_data(
             }
         }
     }
+    let _ = LED_DATA
+        .send(led_task::LedMessage {
+            debug_led1: Some(led_task::LedState::Off),
+            debug_led2: None,
+            debug_led3: None,
+        })
+        .await;
     loop {
+        let mut message = DataMessageI2C {
+            temperature: 0.0,
+            humidity: 0.0,
+            position: (0.0, 0.0, 0.0), // x, y, z position, likely incorrect, but fed from the accelerometer
+            rotation: (0.0, 0.0, 0.0), // x, y, z rotation
+            direction: 0.0,
+            aht_ready: false,
+            mag_ready: false,
+            gyro_ready: false,
+        };
         match icm42688p.read_all_data().await {
             Ok(d) => {
                 let now = Instant::now();
@@ -184,7 +191,28 @@ pub async fn gather_i2c_data(
                 error!("Failed to read GY271: {:?}", defmt::Debug2Format(&e));
             }
         }
-
+        match aht.read().await {
+            Ok(data) => {
+                info!(
+                    "AHT20 Data: Temperature: {}°C, Humidity: {}%",
+                    data.0, data.1
+                );
+                message.temperature = data.0;
+                message.humidity = data.1;
+                message.aht_ready = true;
+            }
+            Err(e) => {
+                error!("Failed to read AHT20: {:?}", defmt::Debug2Format(&e));
+            }
+        }
+        let _ = LED_DATA
+            .send(led_task::LedMessage {
+                debug_led1: Some(led_task::LedState::Blinking),
+                debug_led2: None,
+                debug_led3: None,
+            })
+            .await;
+        DEVICE_DATA_I2C.send(message).await;
         // Timer::after_millis(100).await;
     }
 }
