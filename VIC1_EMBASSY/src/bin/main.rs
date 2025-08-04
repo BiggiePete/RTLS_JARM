@@ -99,4 +99,5 @@ async fn main(spawner: Spawner) {
     spawner
         .spawn(led_task::led_task(debug_led1, debug_led2, debug_led3))
         .unwrap();
+    loop {}
 }
