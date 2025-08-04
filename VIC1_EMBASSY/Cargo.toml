@@ -87,6 +87,10 @@ name = "test_gzp"
 harness = false
 
 [[bin]]
+name = "test_pwmx4"
+harness = false
+
+[[bin]]
 name = "test_gzp2"
 harness = false
 
