@@ -3,7 +3,7 @@
 
 use defmt::*;
 use embassy_executor::Spawner;
-use embassy_stm32::gpio::{Level, Output, OutputType, Speed};
+use embassy_stm32::gpio::{Input, Level, Output, OutputType, Pull, Speed};
 use embassy_stm32::time::hz;
 use embassy_stm32::timer::simple_pwm::{PwmPin, SimplePwm};
 
@@ -21,8 +21,12 @@ async fn main(_spawner: Spawner) {
     let p = embassy_stm32::init(Default::default());
     info!("Hello World! from JARM Flight Controller");
 
-    let mut debug_led1 = Output::new(p.PB15, Level::Low, Speed::Low);
+    let mut debug_led1 = Output::new(p.PB15, Level::High, Speed::Low);
+    let mut debug_led2 = Output::new(p.PB14, Level::High, Speed::Low);
+    let mut debug_led3 = Output::new(p.PB13, Level::High, Speed::Low);
+
     let _power_select = Output::new(p.PB12, Level::High, Speed::Low);
+    let button = Input::new(p.PC8, Pull::Up);
 
     // --- Initialize PWM ---
     // Note: The specific pins for TIM1 channels are MCU-dependent.
@@ -32,7 +36,7 @@ async fn main(_spawner: Spawner) {
     let ch3 = PwmPin::new_ch3(p.PA10, OutputType::PushPull);
     let ch4 = PwmPin::new_ch4(p.PA11, OutputType::PushPull); // This is our target motor
 
-    let mut pwm = SimplePwm::new(
+    let pwm = SimplePwm::new(
         p.TIM1,
         Some(ch1),
         Some(ch2),
@@ -115,6 +119,16 @@ async fn main(_spawner: Spawner) {
     info!("ESC calibration complete. Motor should be armed.");
     // =================================================================
 
+    // wait for button to be pressed, in the mean time blink the LED
+    info!("Press the button to start the motor test...");
+    let button_state = false;
+    while !button_state {
+        debug_led1.toggle();
+        Timer::after_millis(500).await;
+        if button.is_low() {
+            break;
+        }
+    }
     // --- Spin motor up to 10% throttle ---
     info!("Spinning motor to 10% throttle...");
 
@@ -131,7 +145,7 @@ async fn main(_spawner: Spawner) {
     // The motor will continue to spin at 10%.
     // The main loop will now just blink the LED to show the MCU is alive.
     loop {
-        debug_led1.toggle();
+        debug_led2.toggle();
         Timer::after_millis(500).await;
     }
 }
