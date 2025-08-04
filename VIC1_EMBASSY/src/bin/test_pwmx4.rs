@@ -147,5 +147,11 @@ async fn main(_spawner: Spawner) {
     loop {
         debug_led2.toggle();
         Timer::after_millis(500).await;
+        if button.is_low() {
+            motor1.set_duty_cycle(min_throttle_duty);
+            motor2.set_duty_cycle(min_throttle_duty);
+            motor3.set_duty_cycle(min_throttle_duty);
+            motor4.set_duty_cycle(min_throttle_duty);
+        }
     }
 }
