@@ -26,12 +26,11 @@ pub static DEVICE_DATA_GPS: Channel<CriticalSectionRawMutex, DataMessageGPS, 2> 
 
 #[embassy_executor::task]
 pub async fn gather_gps_data(mut uart_rx: UartRx<'static, Async>) {
+    trace!("Setting up GPS TASK");
     // Initialize GPS here
     // This is a placeholder for GPS initialization logic
     // You would typically use a GPS library to read data from the USART
-
-    // Simulate GPS data gathering
-    let _ = uart_rx.set_baudrate(9600);
+    info!("Initializing GPS");
     let mut gps = NeoGps::new(&mut uart_rx);
     loop {
         let mut gps_data = DataMessageGPS {
@@ -67,7 +66,6 @@ pub async fn gather_gps_data(mut uart_rx: UartRx<'static, Async>) {
         }
 
         DEVICE_DATA_GPS.send(gps_data).await;
-
-        Timer::after(Duration::from_secs(1)).await; // Simulate delay for GPS data reading
+        Timer::after_millis(100).await;
     }
 }

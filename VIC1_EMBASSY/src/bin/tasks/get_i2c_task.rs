@@ -18,6 +18,17 @@ use crate::gy271::GY271;
 #[path = "./led_task.rs"]
 mod led_task;
 
+use core::cell::RefCell;
+use core::f64::consts::PI;
+use defmt::*;
+use embassy_stm32::i2c::I2c;
+use embassy_stm32::mode::Async;
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::channel::Channel;
+use embassy_time::{Instant, Timer};
+use libm::atan2;
+use {defmt_rtt as _, panic_probe as _};
+
 #[derive(Debug)]
 pub struct DataMessageI2C {
     temperature: f32,
@@ -35,19 +46,9 @@ pub struct DataMessageI2C {
 
 pub static DEVICE_DATA_I2C: Channel<CriticalSectionRawMutex, DataMessageI2C, 2> = Channel::new();
 
-use core::cell::RefCell;
-use core::f64::consts::PI;
-use defmt::*;
-use embassy_stm32::i2c::I2c;
-use embassy_stm32::mode::Async;
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use embassy_sync::channel::Channel;
-use embassy_time::Instant;
-use libm::atan2;
-use {defmt_rtt as _, panic_probe as _};
-
 #[embassy_executor::task]
 pub async fn gather_i2c_data(i2c: embassy_stm32::i2c::I2c<'static, Async>) {
+    trace!("Setting up I2C TASK");
     // DEVICE_DATA.send(DataMessage::Temperature(0.0)).await
     // initialize i2c devices
     let i2c_ref: RefCell<I2c<'static, Async>> = RefCell::new(i2c);
@@ -61,6 +62,7 @@ pub async fn gather_i2c_data(i2c: embassy_stm32::i2c::I2c<'static, Async>) {
         .continuous()
         .await
         .expect("Failed to set GY-271 to continuous mode");
+    info!("Finished setting up I2C Vars");
 
     aht.init().await.unwrap();
     gy271.continuous().await.unwrap();
@@ -205,14 +207,15 @@ pub async fn gather_i2c_data(i2c: embassy_stm32::i2c::I2c<'static, Async>) {
                 error!("Failed to read AHT20: {:?}", defmt::Debug2Format(&e));
             }
         }
-        let _ = LED_DATA
-            .send(led_task::LedMessage {
-                debug_led1: Some(led_task::LedState::Blinking),
-                debug_led2: None,
-                debug_led3: None,
-            })
-            .await;
+        // TODO: make sure t0 fix the LED channel
+        // let _ = LED_DATA
+        //     .send(led_task::LedMessage {
+        //         debug_led1: Some(led_task::LedState::Blinking),
+        //         debug_led2: None,
+        //         debug_led3: None,
+        //     })
+        //     .await;
         DEVICE_DATA_I2C.send(message).await;
-        // Timer::after_millis(100).await;
+        Timer::after_millis(100).await;
     }
 }

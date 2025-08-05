@@ -41,6 +41,10 @@ use crate::get_i2c_task::gather_i2c_data;
 mod get_gps_task;
 use crate::get_gps_task::gather_gps_data;
 
+#[path = "./tasks/data_consumer_task.rs"]
+mod data_consumer_task;
+use crate::data_consumer_task::consume_data;
+
 #[path = "./tasks/led_task.rs"]
 mod led_task;
 
@@ -90,14 +94,24 @@ async fn main(spawner: Spawner) {
         Hertz(100_000),
         i2c_config,
     );
+    info!("done configuring I2C");
 
-    let uart_config = embassy_stm32::usart::Config::default(); // Set baud rate etc.
+    let mut uart_config = embassy_stm32::usart::Config::default(); // Set baud rate etc.
+    uart_config.baudrate = 9600;
     let uart_rx = UartRx::new(p.USART2, Irqs, p.PA3, p.DMA1_CH5, uart_config).unwrap();
+
+    info!("done configuring UART");
 
     spawner.spawn(gather_i2c_data(i2c)).unwrap();
     spawner.spawn(gather_gps_data(uart_rx)).unwrap();
-    spawner
-        .spawn(led_task::led_task(debug_led1, debug_led2, debug_led3))
-        .unwrap();
-    loop {}
+    spawner.spawn(consume_data()).unwrap();
+    // TODO look into if or why the LED task is failing
+    // spawner
+    //     .spawn(led_task::led_task(debug_led1, debug_led2, debug_led3))
+    //     .unwrap();
+    info!("Done Initializing Tasks");
+    loop {
+        info!("Tick");
+        Timer::after_secs(1).await;
+    }
 }
