@@ -19,6 +19,7 @@ use crate::gy271::GY271;
 
 use core::cell::RefCell;
 use core::f64::consts::PI;
+
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_stm32::gpio::{Level, Output, Speed};
@@ -27,8 +28,9 @@ use embassy_stm32::mode::Async;
 use embassy_stm32::time::Hertz;
 use embassy_stm32::usart::UartRx;
 use embassy_stm32::{bind_interrupts, i2c, peripherals, usart};
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex};
 use embassy_sync::channel::Channel;
+use embassy_sync::mutex::Mutex;
 use embassy_time::{Duration, Instant, Timer};
 use libm::atan2;
 use {defmt_rtt as _, panic_probe as _};
@@ -48,6 +50,14 @@ use crate::data_consumer_task::consume_data;
 #[path = "./tasks/led_task.rs"]
 mod led_task;
 
+#[derive(Debug)]
+enum STATE {
+    SETUP,
+    LAUNCH,
+    LANDING,
+}
+
+pub(crate) static GLOBAL_STATE: Mutex<CriticalSectionRawMutex,STATE> = Mutex::new(STATE::SETUP);
 // so what we should do here is set up a system of tasks, the tasks likely have the ability to do something on their first run, then do something else in loop
 // we will use messages and message queues, to determine the state of the system, so we can have a queue called I2C data, that has the acceleration data, the gyro, and the mag,
 // we can then also have another channel called gps
@@ -73,8 +83,11 @@ bind_interrupts!(struct Irqs {
 async fn main(spawner: Spawner) {
     let p = embassy_stm32::init(Default::default());
     info!("Hello World! from JARM");
-    // lets initialize all of the components necessary for runtime
+    // guarentee that the static object has been reset
+    let state = GLOBAL_STATE;
+    state
 
+    // lets initialize all of the components necessary for runtime
     let debug_led1 = Output::new(p.PB15, Level::High, Speed::Low);
     let debug_led2 = Output::new(p.PB14, Level::High, Speed::Low);
     let debug_led3 = Output::new(p.PB13, Level::High, Speed::Low);

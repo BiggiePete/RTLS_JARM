@@ -30,18 +30,18 @@ use libm::atan2;
 use {defmt_rtt as _, panic_probe as _};
 
 #[derive(Debug)]
-pub struct DataMessageI2C {
-    temperature: f32,
-    humidity: f32,
+pub(crate) struct DataMessageI2C {
+    pub(crate) temperature: f32,
+    pub(crate) humidity: f32,
     // pressure: f32,
-    position: (f64, f64, f64), // x, y, z position
-    rotation: (f64, f64, f64), // x, y, z rotation
-    direction: f32,            // direction in degrees
+    pub(crate) position: (f64, f64, f64), // x, y, z position
+    pub(crate) rotation: (f64, f64, f64), // x, y, z rotation
+    pub(crate) direction: f32,            // direction in degrees
 
     // display if a certain sensor is ready
-    aht_ready: bool,
-    mag_ready: bool,
-    gyro_ready: bool,
+    pub(crate) aht_ready: bool,
+    pub(crate) mag_ready: bool,
+    pub(crate) gyro_ready: bool,
 }
 
 pub static DEVICE_DATA_I2C: Channel<CriticalSectionRawMutex, DataMessageI2C, 2> = Channel::new();

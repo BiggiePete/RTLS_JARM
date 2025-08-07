@@ -15,11 +15,11 @@ use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
 
 #[derive(Debug)]
-pub struct DataMessageGPS {
-    latitude: f32,
-    longitude: f32,
-    altitude: f32,
-    gps_ready: bool,
+pub(crate) struct DataMessageGPS {
+    pub(crate) latitude: f32,
+    pub(crate) longitude: f32,
+    pub(crate) altitude: f32,
+    pub(crate) gps_ready: bool,
 }
 
 pub static DEVICE_DATA_GPS: Channel<CriticalSectionRawMutex, DataMessageGPS, 2> = Channel::new();
