@@ -32,7 +32,7 @@ async fn main(_spawner: Spawner) {
     let ch3 = PwmPin::new_ch3(p.PA10, OutputType::PushPull);
     let ch4 = PwmPin::new_ch4(p.PA11, OutputType::PushPull); // This is our target motor
 
-    let mut pwm = SimplePwm::new(
+    let mut pwm: SimplePwm<'_, embassy_stm32::peripherals::TIM1> = SimplePwm::new(
         p.TIM1,
         Some(ch1),
         Some(ch2),

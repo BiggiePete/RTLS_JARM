@@ -22,13 +22,14 @@ use core::f64::consts::PI;
 
 use defmt::*;
 use embassy_executor::Spawner;
-use embassy_stm32::gpio::{Level, Output, Speed};
+use embassy_stm32::gpio::{Level, Output, OutputType, Speed};
 use embassy_stm32::i2c::I2c;
 use embassy_stm32::mode::Async;
-use embassy_stm32::time::Hertz;
+use embassy_stm32::time::{hz, Hertz};
+use embassy_stm32::timer::simple_pwm::{PwmPin, SimplePwm};
 use embassy_stm32::usart::UartRx;
 use embassy_stm32::{bind_interrupts, i2c, peripherals, usart};
-use embassy_sync::blocking_mutex::raw::{CriticalSectionRawMutex, NoopRawMutex};
+use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_sync::mutex::Mutex;
 use embassy_time::{Duration, Instant, Timer};
@@ -50,14 +51,20 @@ use crate::data_consumer_task::consume_data;
 #[path = "./tasks/led_task.rs"]
 mod led_task;
 
-#[derive(Debug)]
+#[path = "./tasks/motor_task.rs"]
+mod motor_task;
+use crate::motor_task::{motor_operation_task, ESC_PWM_FREQ_HZ};
+
+#[derive(Debug, PartialEq)]
 enum STATE {
+    PREPARE,
     SETUP,
     LAUNCH,
     LANDING,
+    FINAL,
 }
 
-pub(crate) static GLOBAL_STATE: Mutex<CriticalSectionRawMutex,STATE> = Mutex::new(STATE::SETUP);
+pub(crate) static GLOBAL_STATE: Mutex<ThreadModeRawMutex, STATE> = Mutex::new(STATE::PREPARE);
 // so what we should do here is set up a system of tasks, the tasks likely have the ability to do something on their first run, then do something else in loop
 // we will use messages and message queues, to determine the state of the system, so we can have a queue called I2C data, that has the acceleration data, the gyro, and the mag,
 // we can then also have another channel called gps
@@ -84,9 +91,10 @@ async fn main(spawner: Spawner) {
     let p = embassy_stm32::init(Default::default());
     info!("Hello World! from JARM");
     // guarentee that the static object has been reset
-    let state = GLOBAL_STATE;
-    state
-
+    {
+        let mut state = GLOBAL_STATE.lock().await;
+        *state = STATE::PREPARE;
+    }
     // lets initialize all of the components necessary for runtime
     let debug_led1 = Output::new(p.PB15, Level::High, Speed::Low);
     let debug_led2 = Output::new(p.PB14, Level::High, Speed::Low);
@@ -109,6 +117,23 @@ async fn main(spawner: Spawner) {
     );
     info!("done configuring I2C");
 
+    let ch1 = PwmPin::new_ch1(p.PA8, OutputType::PushPull);
+    let ch2 = PwmPin::new_ch2(p.PA9, OutputType::PushPull);
+    let ch3 = PwmPin::new_ch3(p.PA10, OutputType::PushPull);
+    let ch4 = PwmPin::new_ch4(p.PA11, OutputType::PushPull); // This is our target motor
+
+    let pwm: SimplePwm<'_, embassy_stm32::peripherals::TIM1> = SimplePwm::new(
+        p.TIM1,
+        Some(ch1),
+        Some(ch2),
+        Some(ch3),
+        Some(ch4),
+        hz(ESC_PWM_FREQ_HZ), // Set correct 50Hz frequency for ESC
+        Default::default(),
+    );
+
+    info!("done configuring PWM handlers");
+
     let mut uart_config = embassy_stm32::usart::Config::default(); // Set baud rate etc.
     uart_config.baudrate = 9600;
     let uart_rx = UartRx::new(p.USART2, Irqs, p.PA3, p.DMA1_CH5, uart_config).unwrap();
@@ -118,6 +143,7 @@ async fn main(spawner: Spawner) {
     spawner.spawn(gather_i2c_data(i2c)).unwrap();
     spawner.spawn(gather_gps_data(uart_rx)).unwrap();
     spawner.spawn(consume_data()).unwrap();
+    spawner.spawn(motor_operation_task(pwm)).unwrap();
     // TODO look into if or why the LED task is failing
     // spawner
     //     .spawn(led_task::led_task(debug_led1, debug_led2, debug_led3))
