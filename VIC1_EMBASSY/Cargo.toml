@@ -94,9 +94,9 @@ harness = false
 name = "test_button"
 harness = false
 
-[[bin]]
-name = "test_ekf"
-harness = false
+# [[bin]]
+# name = "test_ekf"
+# harness = false
 
 [[bin]]
 name = "test_gps"

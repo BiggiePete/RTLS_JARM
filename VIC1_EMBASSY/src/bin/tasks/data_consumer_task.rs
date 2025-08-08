@@ -6,7 +6,7 @@ use defmt::*;
 use embassy_stm32::gpio::{Input, Output};
 use embassy_time::{Instant, Timer};
 use heapless::Vec;
-use num_traits::{abs, clamp};
+use num_traits::clamp;
 use {defmt_rtt as _, panic_probe as _};
 
 #[macro_export]
@@ -62,7 +62,7 @@ pub async fn consume_data(
     let mut gps_home: (f32, f32, f32) = (0.0, 0.0, 0.0);
     let mut highest_alt = 0.0;
     let mut falling_count: u8 = 0;
-    let mut corrected_attitude = false;
+    // let mut corrected_attitude = false;
     let mut dt: f32;
     let mut curr_time = Instant::now(); // get current time in seconds
 
@@ -70,8 +70,8 @@ pub async fn consume_data(
     let mut pid_pit = Pid::new(PidConfig::new(0.1, 0.005, 0.01).with_limits(-1.0, 1.0));
     let mut pid_rol = Pid::new(PidConfig::new(0.1, 0.005, 0.01).with_limits(-1.0, 1.0));
 
-    let mut pid_lat = Pid::new(PidConfig::new(0.1, 0.005, 0.01).with_limits(-1.0, 1.0));
-    let mut pid_lon = Pid::new(PidConfig::new(0.1, 0.005, 0.01).with_limits(-1.0, 1.0));
+    let mut pid_lat = Pid::new(PidConfig::new(0.1, 0.001, 0.001).with_limits(-1.0, 1.0));
+    let mut pid_lon = Pid::new(PidConfig::new(0.1, 0.001, 0.001).with_limits(-1.0, 1.0));
 
     loop {
         let mut consumer_obj = ConsumerObject {
@@ -228,14 +228,14 @@ pub async fn consume_data(
                     {
                         *state = STATE::FINAL;
                     }
-                    if !corrected_attitude
-                        && abs(consumer_obj.rotation.0) <10.0 // if we are within 10degrees on the X
-                        && abs(consumer_obj.rotation.1) <10.0
-                    // if we are within 10degrees on the Y
-                    // if we are within 10degrees on the Y
-                    {
-                        corrected_attitude = true;
-                    }
+                    // if !corrected_attitude
+                    //     && abs(consumer_obj.rotation.0) <10.0 // if we are within 10degrees on the X
+                    //     && abs(consumer_obj.rotation.1) <10.0
+                    // // if we are within 10degrees on the Y
+                    // // if we are within 10degrees on the Y
+                    // {
+                    //     corrected_attitude = true;
+                    // }
 
                     // general Corrections for Pitch and Roll
                     let pitch_drive = pid_pit.update(0.0, consumer_obj.rotation.0 as f32, dt);
@@ -243,33 +243,51 @@ pub async fn consume_data(
                     let yaw_drive = pid_yaw.update(180.0, consumer_obj.direction, dt);
 
                     // TODO: add controls for shifting the pitch and yaw drive requirements based on lat and long
-                    // TODO: vary the amount the lat and lon can effect the output based on sin and cos of the angle
-                    let lat_drive = pid_lat.update(gps_home.0, consumer_obj.lat_lon_alt.0, dt); //positive = moving north
+                    // TODO: vary the amount the lat and lon can effect the output based on sin and cos of the angle of the direction
+                    let lat_drive =
+                        pid_lat.update(gps_home.0, consumer_obj.lat_lon_alt.0, dt) * -1.0; //positive = moving north
                     let lon_drive =
                         pid_lon.update(gps_home.1, consumer_obj.lat_lon_alt.1, dt) * -1.0; //positive = moving east
 
                     // place motor drives in the 1st quadrant, and apply force as necessary
+                    // this will attempt to correct, and land the craft
                     match DEVICE_MOTOR_DATA.try_send(DataMessageMotors {
                         motor1frac100: clamp(
-                            ((0.3 + (pitch_drive + roll_drive) * 0.25 + yaw_drive * 0.1) * 100.0)
-                                as u8,
+                            ((0.3
+                                + ((pitch_drive + (lat_drive * 0.1))
+                                    + (roll_drive + (lon_drive * 0.1)))
+                                    * 0.25
+                                + yaw_drive * 0.1)
+                                * 100.0) as u8,
                             0,
                             100,
                         ),
                         motor2frac100: clamp(
-                            ((0.3 + (pitch_drive - roll_drive) * 0.25 - yaw_drive * 0.1) * 100.0)
-                                as u8,
+                            ((0.3
+                                + ((pitch_drive + (lat_drive * 0.1))
+                                    - (roll_drive + (lon_drive * 0.1)))
+                                    * 0.25
+                                - yaw_drive * 0.1)
+                                * 100.0) as u8,
                             0,
                             100,
                         ),
                         motor3frac100: clamp(
-                            ((0.3 + ((pitch_drive * -1.0) + roll_drive) * 0.25 - yaw_drive * 0.1)
+                            ((0.3
+                                + (((pitch_drive + (lat_drive * 0.1)) * -1.0)
+                                    + (roll_drive + (lon_drive * 0.1)))
+                                    * 0.25
+                                - yaw_drive * 0.1)
                                 * 100.0) as u8,
                             0,
                             100,
                         ),
                         motor4frac100: clamp(
-                            ((0.3 + ((pitch_drive * -1.0) - roll_drive) * 0.25 + yaw_drive * 0.1)
+                            ((0.3
+                                + (((pitch_drive + (lat_drive * 0.1)) * -1.0)
+                                    - (roll_drive + (lon_drive * 0.1)))
+                                    * 0.25
+                                + yaw_drive * 0.1)
                                 * 100.0) as u8,
                             0,
                             100,
@@ -290,7 +308,9 @@ pub async fn consume_data(
                     // slowly decend, while trying to maintain a position as close as possible to the landing place, treat Lat and Lon as X and Y coords, no need for fancy spherical coords handling
                 }
                 STATE::FINAL => {
-                    info!("System is in FINAL state")
+                    info!("System is in FINAL state");
+                    Timer::after_secs(3).await;
+
                     // in final mode, we disable everything, and celebrate, as we are either in one piece, or a million
                 }
             }

@@ -13,7 +13,6 @@ mod inertial;
 #[path = "../gy271.rs"]
 mod gy271;
 
-
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_stm32::gpio::{Input, Level, Output, OutputType, Pull, Speed};
