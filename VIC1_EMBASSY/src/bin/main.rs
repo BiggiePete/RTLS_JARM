@@ -17,6 +17,7 @@ use defmt::*;
 use embassy_executor::Spawner;
 use embassy_stm32::gpio::{Input, Level, Output, OutputType, Pull, Speed};
 use embassy_stm32::i2c::I2c;
+use embassy_stm32::spi::{Config, Spi};
 use embassy_stm32::time::{hz, Hertz};
 use embassy_stm32::timer::simple_pwm::{PwmPin, SimplePwm};
 use embassy_stm32::usart::UartRx;
@@ -41,6 +42,10 @@ use crate::data_consumer_task::consume_data;
 #[path = "./tasks/motor_task.rs"]
 mod motor_task;
 use crate::motor_task::{motor_operation_task, ESC_PWM_FREQ_HZ};
+
+#[path = "./tasks/lora_task.rs"]
+mod lora_task;
+use crate::lora_task::lora_tx;
 
 #[derive(Debug, PartialEq)]
 enum STATE {
@@ -106,10 +111,11 @@ async fn main(spawner: Spawner) {
     );
     info!("done configuring I2C");
 
+    // drone motors
     let ch1 = PwmPin::new_ch1(p.PA8, OutputType::PushPull);
     let ch2 = PwmPin::new_ch2(p.PA9, OutputType::PushPull);
     let ch3 = PwmPin::new_ch3(p.PA10, OutputType::PushPull);
-    let ch4 = PwmPin::new_ch4(p.PA11, OutputType::PushPull); // This is our target motor
+    let ch4 = PwmPin::new_ch4(p.PA11, OutputType::PushPull);
 
     let pwm: SimplePwm<'_, embassy_stm32::peripherals::TIM1> = SimplePwm::new(
         p.TIM1,
@@ -117,6 +123,22 @@ async fn main(spawner: Spawner) {
         Some(ch2),
         Some(ch3),
         Some(ch4),
+        hz(ESC_PWM_FREQ_HZ), // Set correct 50Hz frequency for ESC
+        Default::default(),
+    );
+
+    // servo motors
+    let servo_ch1 = PwmPin::new_ch1(p.PB4, OutputType::PushPull);
+    let servo_ch2 = PwmPin::new_ch2(p.PB5, OutputType::PushPull);
+    let servo_ch3 = PwmPin::new_ch3(p.PB0, OutputType::PushPull);
+    let servo_ch4 = PwmPin::new_ch4(p.PB1, OutputType::PushPull);
+
+    let pwm_servo = SimplePwm::new(
+        p.TIM3,
+        Some(servo_ch1),
+        Some(servo_ch2),
+        Some(servo_ch3),
+        Some(servo_ch4),
         hz(ESC_PWM_FREQ_HZ), // Set correct 50Hz frequency for ESC
         Default::default(),
     );
@@ -129,6 +151,16 @@ async fn main(spawner: Spawner) {
 
     info!("done configuring UART");
 
+    let mut spi_config = Config::default();
+    spi_config.frequency = Hertz(1_000_000);
+
+    let mut spi = Spi::new_blocking(p.SPI1, p.PA5, p.PA7, p.PA6, spi_config);
+
+    let mut cs = Output::new(p.PA4, Level::Low, Speed::VeryHigh);
+    let mut servo_pin = Input::new(p.PC6, Pull::None);
+
+    info!("Done configuring the SPI");
+
     spawner.spawn(gather_i2c_data(i2c)).unwrap();
     spawner.spawn(gather_gps_data(uart_rx)).unwrap();
     spawner
@@ -140,6 +172,9 @@ async fn main(spawner: Spawner) {
         ))
         .unwrap();
     spawner.spawn(motor_operation_task(pwm)).unwrap();
+    spawner
+        .spawn(lora_tx(spi, cs, servo_pin, pwm_servo))
+        .unwrap();
 
     info!("Done Initializing Tasks");
     loop {
