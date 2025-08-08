@@ -309,6 +309,14 @@ pub async fn consume_data(
                 }
                 STATE::FINAL => {
                     info!("System is in FINAL state");
+                    DEVICE_MOTOR_DATA
+                        .send(DataMessageMotors {
+                            motor1frac100: 0,
+                            motor2frac100: 0,
+                            motor3frac100: 0,
+                            motor4frac100: 0,
+                        })
+                        .await;
                     Timer::after_secs(3).await;
 
                     // in final mode, we disable everything, and celebrate, as we are either in one piece, or a million
