@@ -1,9 +1,8 @@
 use defmt::*;
-use embassy_stm32::gpio::{Input, Level, Output, OutputType, Pull, Speed};
-use embassy_stm32::mode::{Async, Blocking};
-use embassy_stm32::spi::{Config, Spi};
+use embassy_stm32::gpio::{Input, Output};
+use embassy_stm32::mode::Blocking;
+use embassy_stm32::spi::Spi;
 use embassy_stm32::timer::simple_pwm::SimplePwm;
-use embassy_stm32::usart::UartRx;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
 use embassy_time::Timer;
@@ -25,7 +24,7 @@ pub static LORA_MESSAGE: Channel<CriticalSectionRawMutex, String<200>, 2> = Chan
 pub async fn lora_tx(
     mut spi: Spi<'static, Blocking>,
     mut cs: Output<'static>,
-    mut servo_en_pin: Input<'static>,
+    servo_en_pin: Input<'static>,
     pwm: SimplePwm<'static, embassy_stm32::peripherals::TIM3>,
 ) {
     trace!("Setting up LoRa Skynet0");

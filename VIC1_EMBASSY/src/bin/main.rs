@@ -154,10 +154,10 @@ async fn main(spawner: Spawner) {
     let mut spi_config = Config::default();
     spi_config.frequency = Hertz(1_000_000);
 
-    let mut spi = Spi::new_blocking(p.SPI1, p.PA5, p.PA7, p.PA6, spi_config);
+    let spi = Spi::new_blocking(p.SPI1, p.PA5, p.PA7, p.PA6, spi_config);
 
-    let mut cs = Output::new(p.PA4, Level::Low, Speed::VeryHigh);
-    let mut servo_pin = Input::new(p.PC6, Pull::None);
+    let cs = Output::new(p.PA4, Level::Low, Speed::VeryHigh);
+    let servo_pin = Input::new(p.PC6, Pull::None);
 
     info!("Done configuring the SPI");
 
