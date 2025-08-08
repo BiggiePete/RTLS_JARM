@@ -35,6 +35,7 @@ dependencies = [
  "num-traits",
  "panic-probe",
  "qmc5883l",
+ "ryu",
  "sensor-tlv493d",
  "static_cell",
  "usbd-hid",
@@ -920,6 +921,12 @@ checksum = "138e3e0acb6c9fb258b19b67cb8abd63c00679d2851805ea151465464fe9030a"
 dependencies = [
  "semver",
 ]
+
+[[package]]
+name = "ryu"
+version = "1.0.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "28d3b2b1366ec20994f1fd18c3c594f05c5dd4bc44d8bb0c1c632c8d6829481f"
 
 [[package]]
 name = "sdio-host"

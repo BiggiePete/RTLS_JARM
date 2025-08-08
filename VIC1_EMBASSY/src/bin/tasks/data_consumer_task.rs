@@ -1,11 +1,13 @@
+use crate::lora_task::LORA_MESSAGE;
 use crate::motor_task::{DataMessageMotors, DEVICE_MOTOR_DATA};
 use crate::{get_gps_task::DEVICE_DATA_GPS, get_i2c_task::DEVICE_DATA_I2C};
 use crate::{GLOBAL_STATE, STATE};
 use advanced_pid::{prelude::*, Pid, PidConfig};
+use core::fmt::Write;
 use defmt::*;
 use embassy_stm32::gpio::{Input, Output};
 use embassy_time::{Instant, Timer};
-use heapless::Vec;
+use heapless::{String, Vec};
 use num_traits::clamp;
 use {defmt_rtt as _, panic_probe as _};
 
@@ -115,6 +117,9 @@ pub async fn consume_data(
                 consumer_obj.gps_update = false;
             }
         }
+        let message = data_2_msg(&consumer_obj);
+
+        let _ = LORA_MESSAGE.try_send(message);
 
         if !consumer_obj.sys_ready {
             error!("System is partially ready! Skipping this cycle");
@@ -326,4 +331,34 @@ pub async fn consume_data(
 
         // Timer::after_millis(100).await;
     }
+}
+
+fn data_2_msg(obj: &ConsumerObject) -> String<200> {
+    let mut message: String<200> = String::new();
+    let mut buffer = ryu::Buffer::new(); // Re-usable buffer for float formatting
+
+    // Manually build the string
+    let r1 = buffer.format(obj.rotation.0);
+    message.push_str(r1).unwrap();
+    message.push(',').unwrap();
+
+    let r2 = buffer.format(obj.rotation.1);
+    message.push_str(r2).unwrap();
+    message.push(',').unwrap();
+
+    let r3 = buffer.format(obj.rotation.2);
+    message.push_str(r3).unwrap();
+    message.push(' ').unwrap();
+
+    let lat = buffer.format(obj.lat_lon_alt.0);
+    message.push_str(lat).unwrap();
+    message.push(',').unwrap();
+
+    let lon = buffer.format(obj.lat_lon_alt.1);
+    message.push_str(lon).unwrap();
+    message.push(',').unwrap();
+
+    let alt = buffer.format(obj.lat_lon_alt.2);
+    message.push_str(alt).unwrap();
+    return message;
 }
