@@ -27,6 +27,7 @@ use crate::icm42688::{Icm42688p, ICM42688P_ADDR_AD0_LOW};
 mod inertial;
 use crate::inertial::{CalibrationState, InertialNavigator, Vec3};
 
+use core::f64::consts::PI;
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_stm32::gpio::{Level, Output, Speed};
@@ -49,7 +50,20 @@ bind_interrupts!(struct Irqs {
 
 // 2 spots
 static DEVICE_DATA: Channel<CriticalSectionRawMutex, DataMessage, 2> = Channel::new();
+#[macro_export]
+macro_rules! deg_to_rad {
+    ($degrees:expr) => {
+        ($degrees as f64) * (PI / 180.0)
+    };
+}
 
+/// Converts an expression from radians to degrees.
+#[macro_export]
+macro_rules! rad_to_deg {
+    ($radians:expr) => {
+        ($radians as f64) * (180.0 / PI)
+    };
+}
 #[derive(Debug)]
 struct DataMessage {
     temperature: f32,

@@ -1,5 +1,3 @@
-#[path = "./led_task.rs"]
-mod led_task;
 use crate::{GLOBAL_STATE, STATE};
 use defmt::*;
 use embassy_stm32::{mode::Async, timer::simple_pwm::SimplePwm};
@@ -117,13 +115,19 @@ pub async fn motor_operation_task(pwm: SimplePwm<'static, embassy_stm32::periphe
         motor4.set_duty_cycle_percent(motor_fracs.motor4frac100);
 
         {
-            let state = GLOBAL_STATE.lock().await;
-            if *state == STATE::FINAL {
-                motor1.set_duty_cycle(min_throttle_duty);
-                motor2.set_duty_cycle(min_throttle_duty);
-                motor3.set_duty_cycle(min_throttle_duty);
-                motor4.set_duty_cycle(min_throttle_duty);
-                break;
+            match GLOBAL_STATE.try_lock() {
+                Ok(state) => {
+                    if *state == STATE::FINAL {
+                        motor1.set_duty_cycle(min_throttle_duty);
+                        motor2.set_duty_cycle(min_throttle_duty);
+                        motor3.set_duty_cycle(min_throttle_duty);
+                        motor4.set_duty_cycle(min_throttle_duty);
+                        break;
+                    }
+                }
+                Err(e) => {
+                    warn!("Failed to lock state")
+                }
             }
         }
     }

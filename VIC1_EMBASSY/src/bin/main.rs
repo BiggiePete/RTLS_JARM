@@ -9,7 +9,7 @@ use crate::aht20::AHT20;
 mod icm42688;
 use crate::icm42688::{Icm42688p, ICM42688P_ADDR_AD0_LOW};
 
-#[path = "../inertial_navigator2.rs"]
+#[path = "../inertial_navigator3.rs"]
 mod inertial;
 use crate::inertial::{CalibrationState, InertialNavigator, Vec3};
 
@@ -22,7 +22,7 @@ use core::f64::consts::PI;
 
 use defmt::*;
 use embassy_executor::Spawner;
-use embassy_stm32::gpio::{Level, Output, OutputType, Speed};
+use embassy_stm32::gpio::{Input, Level, Output, OutputType, Pull, Speed};
 use embassy_stm32::i2c::I2c;
 use embassy_stm32::mode::Async;
 use embassy_stm32::time::{hz, Hertz};
@@ -47,9 +47,6 @@ use crate::get_gps_task::gather_gps_data;
 #[path = "./tasks/data_consumer_task.rs"]
 mod data_consumer_task;
 use crate::data_consumer_task::consume_data;
-
-#[path = "./tasks/led_task.rs"]
-mod led_task;
 
 #[path = "./tasks/motor_task.rs"]
 mod motor_task;
@@ -96,9 +93,11 @@ async fn main(spawner: Spawner) {
         *state = STATE::PREPARE;
     }
     // lets initialize all of the components necessary for runtime
-    let debug_led1 = Output::new(p.PB15, Level::High, Speed::Low);
-    let debug_led2 = Output::new(p.PB14, Level::High, Speed::Low);
-    let debug_led3 = Output::new(p.PB13, Level::High, Speed::Low);
+    let debug_led1 = Output::new(p.PB13, Level::Low, Speed::Low);
+    let debug_led2 = Output::new(p.PB14, Level::Low, Speed::Low);
+    let debug_led3 = Output::new(p.PB15, Level::Low, Speed::Low);
+    let set_pos_button = Input::new(p.PC8, Pull::Up);
+
     let _power_select = Output::new(p.PB12, Level::High, Speed::Low);
 
     // Initialize I2C for sensors
@@ -142,12 +141,16 @@ async fn main(spawner: Spawner) {
 
     spawner.spawn(gather_i2c_data(i2c)).unwrap();
     spawner.spawn(gather_gps_data(uart_rx)).unwrap();
-    spawner.spawn(consume_data()).unwrap();
+    spawner
+        .spawn(consume_data(
+            debug_led1,
+            debug_led2,
+            debug_led3,
+            set_pos_button,
+        ))
+        .unwrap();
     spawner.spawn(motor_operation_task(pwm)).unwrap();
-    // TODO look into if or why the LED task is failing
-    // spawner
-    //     .spawn(led_task::led_task(debug_led1, debug_led2, debug_led3))
-    //     .unwrap();
+
     info!("Done Initializing Tasks");
     loop {
         info!("Tick");

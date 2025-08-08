@@ -1,22 +1,7 @@
-#[path = "../../aht20.rs"]
-mod aht20;
 use crate::aht20::AHT20;
-
-#[path = "../../icm42688.rs"]
-mod icm42688;
-use crate::get_i2c_task::led_task::LED_DATA;
-use crate::icm42688::{Icm42688p, ICM42688P_ADDR_AD0_LOW};
-
-#[path = "../../inertial_navigator2.rs"]
-mod inertial;
-use crate::inertial::{CalibrationState, InertialNavigator, Vec3};
-
-#[path = "../../gy271.rs"]
-mod gy271;
 use crate::gy271::GY271;
-
-#[path = "./led_task.rs"]
-mod led_task;
+use crate::icm42688::{Icm42688p, ICM42688P_ADDR_AD0_LOW};
+use crate::inertial::{CalibrationState, InertialNavigator, Vec3};
 
 use core::cell::RefCell;
 use core::f64::consts::PI;
@@ -70,7 +55,7 @@ pub async fn gather_i2c_data(i2c: embassy_stm32::i2c::I2c<'static, Async>) {
     info!("I2C devices initialized.");
 
     let mut curr_time = Instant::now(); // get current time in seconds
-    let mut dt;
+    let mut dt = 0 as f64; // init var
 
     let mut nav = InertialNavigator::new();
 
@@ -83,27 +68,21 @@ pub async fn gather_i2c_data(i2c: embassy_stm32::i2c::I2c<'static, Async>) {
                 dt = (now.as_micros() - curr_time.as_micros()) as f64 / 1_000_000.0; // calculate delta time in seconds
                 curr_time = now; // update current time
                 let (accel, gyro) = (
-                    Vec3::new(
-                        (d.accel.x * 9.81) as f64,
-                        (d.accel.y * 9.81) as f64,
-                        (d.accel.z * 9.81) as f64,
-                    ),
+                    Vec3::new((d.accel.x) as f64, (d.accel.y) as f64, (d.accel.z) as f64),
                     Vec3::new(d.gyro.x as f64, d.gyro.y as f64, d.gyro.z as f64),
                 );
                 println!("dt: {}", dt);
                 nav.update(accel, gyro, dt);
+                // nav.force_zero_velocity_update();
 
                 match nav.get_calibration_state() {
                     CalibrationState::WaitingForStability => {
                         // Device needs to be stationary
-                        println!("Please keep device still for calibration...");
-                        let _ = LED_DATA
-                            .send(led_task::LedMessage {
-                                debug_led1: Some(led_task::LedState::On),
-                                debug_led2: None,
-                                debug_led3: None,
-                            })
-                            .await;
+                        println!(
+                            "Please keep device still for calibration... {} {}",
+                            defmt::Debug2Format(&accel),
+                            defmt::Debug2Format(&gyro)
+                        );
                     }
                     CalibrationState::Calibrating => {
                         // Taking samples
@@ -120,13 +99,6 @@ pub async fn gather_i2c_data(i2c: embassy_stm32::i2c::I2c<'static, Async>) {
             }
         }
     }
-    let _ = LED_DATA
-        .send(led_task::LedMessage {
-            debug_led1: Some(led_task::LedState::Off),
-            debug_led2: None,
-            debug_led3: None,
-        })
-        .await;
     loop {
         let mut message = DataMessageI2C {
             temperature: 0.0,
@@ -165,7 +137,11 @@ pub async fn gather_i2c_data(i2c: embassy_stm32::i2c::I2c<'static, Async>) {
 
                 // add data to the message
                 message.position = (state.position.x, state.position.y, state.position.z);
-                message.rotation = (state.rotation.x, state.rotation.y, state.rotation.z);
+                message.rotation = (
+                    state.rotation.x * -1.0,
+                    state.rotation.y * -1.0,
+                    state.rotation.z,
+                );
                 message.gyro_ready = true;
             }
             Err(e) => {
@@ -176,7 +152,8 @@ pub async fn gather_i2c_data(i2c: embassy_stm32::i2c::I2c<'static, Async>) {
             Ok((x, y, _z)) => {
                 let angle_rad = atan2(y as f64, x as f64);
 
-                let mut angle_deg = (angle_rad * (180.0 / PI)) - 70.0; // change this multiplier to whatever angle offset is needed
+                // twist the compass 180, so south is 0degrees, since we want more range around looking north
+                let mut angle_deg = (angle_rad * (180.0 / PI)) - 70.0 + 180.0; // change this multiplier to whatever angle offset is needed
 
                 if angle_deg < 0.0 {
                     angle_deg += 360.0;
@@ -207,15 +184,7 @@ pub async fn gather_i2c_data(i2c: embassy_stm32::i2c::I2c<'static, Async>) {
                 error!("Failed to read AHT20: {:?}", defmt::Debug2Format(&e));
             }
         }
-        // TODO: make sure t0 fix the LED channel
-        // let _ = LED_DATA
-        //     .send(led_task::LedMessage {
-        //         debug_led1: Some(led_task::LedState::Blinking),
-        //         debug_led2: None,
-        //         debug_led3: None,
-        //     })
-        //     .await;
         DEVICE_DATA_I2C.send(message).await;
-        Timer::after_millis(100).await;
+        // Timer::after_millis(100).await;
     }
 }

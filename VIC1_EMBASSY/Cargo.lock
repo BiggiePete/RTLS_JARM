@@ -3,6 +3,12 @@
 version = 4
 
 [[package]]
+name = "advanced-pid"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "986177142ac2ef4b1016d51129475d740c2826e0192900eaee2a592d23118ba1"
+
+[[package]]
 name = "ahash"
 version = "0.8.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -439,6 +445,7 @@ dependencies = [
 name = "embassy-stm32f4-examples"
 version = "0.1.0"
 dependencies = [
+ "advanced-pid",
  "chrono",
  "cortex-m",
  "cortex-m-rt",
