@@ -3,6 +3,44 @@
 version = 4
 
 [[package]]
+name = "RTLS-JARM"
+version = "1.0.0"
+dependencies = [
+ "advanced-pid",
+ "chrono",
+ "cortex-m",
+ "cortex-m-rt",
+ "critical-section",
+ "defmt 1.0.1",
+ "defmt-rtt",
+ "defmt-test",
+ "embassy-executor",
+ "embassy-futures",
+ "embassy-net",
+ "embassy-net-wiznet",
+ "embassy-stm32",
+ "embassy-sync 0.7.0",
+ "embassy-time",
+ "embassy-usb",
+ "embedded-hal 0.2.7",
+ "embedded-hal-bus",
+ "embedded-io",
+ "embedded-io-async",
+ "embedded-storage",
+ "futures-util",
+ "heapless",
+ "libm",
+ "micromath",
+ "nb 1.1.0",
+ "num-traits",
+ "panic-probe",
+ "qmc5883l",
+ "sensor-tlv493d",
+ "static_cell",
+ "usbd-hid",
+]
+
+[[package]]
 name = "advanced-pid"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -439,44 +477,6 @@ dependencies = [
  "stm32-metapac",
  "vcell",
  "volatile-register",
-]
-
-[[package]]
-name = "embassy-stm32f4-examples"
-version = "0.1.0"
-dependencies = [
- "advanced-pid",
- "chrono",
- "cortex-m",
- "cortex-m-rt",
- "critical-section",
- "defmt 1.0.1",
- "defmt-rtt",
- "defmt-test",
- "embassy-executor",
- "embassy-futures",
- "embassy-net",
- "embassy-net-wiznet",
- "embassy-stm32",
- "embassy-sync 0.7.0",
- "embassy-time",
- "embassy-usb",
- "embedded-hal 0.2.7",
- "embedded-hal-bus",
- "embedded-io",
- "embedded-io-async",
- "embedded-storage",
- "futures-util",
- "heapless",
- "libm",
- "micromath",
- "nb 1.1.0",
- "num-traits",
- "panic-probe",
- "qmc5883l",
- "sensor-tlv493d",
- "static_cell",
- "usbd-hid",
 ]
 
 [[package]]
