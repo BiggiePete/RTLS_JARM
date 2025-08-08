@@ -3,33 +3,26 @@
 
 #[path = "../aht20.rs"]
 mod aht20;
-use core::cell::RefCell;
 
-use crate::aht20::AHT20;
 
 #[path = "../GZP6816D.rs"]
 mod gz6816d;
-use crate::gz6816d::Gzp6816d;
 
 #[path = "../i2c_search.rs"]
 mod i2c_search;
-use crate::i2c_search::I2cScanner;
 
 #[path = "../TLV4930D_2.rs"]
 mod tlv4930d;
-use crate::tlv4930d::TLV493D;
 
 #[path = "../icm42688.rs"]
 mod icm42688;
-use crate::icm42688::{Icm42688p, ICM42688P_ADDR_AD0_LOW};
 
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_stm32::gpio::{Level, Output, Speed};
 use embassy_stm32::i2c::I2c;
-use embassy_stm32::mode::{Async, Blocking};
+use embassy_stm32::mode::Blocking;
 use embassy_stm32::time::Hertz;
-use embassy_stm32::usart::{Config, Uart};
 use embassy_stm32::{bind_interrupts, i2c, peripherals};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
@@ -86,9 +79,9 @@ async fn main(spawner: Spawner) {
 #[embassy_executor::task]
 async fn gather_data(
     i2c: embassy_stm32::i2c::I2c<'static, Blocking>,
-    mut debug_led1: Output<'static>,
-    mut debug_led2: Output<'static>,
-    mut debug_led3: Output<'static>,
+    debug_led1: Output<'static>,
+    debug_led2: Output<'static>,
+    debug_led3: Output<'static>,
 ) {
     // DEVICE_DATA.send(DataMessage::Temperature(0.0)).await
     // initialize i2c devices

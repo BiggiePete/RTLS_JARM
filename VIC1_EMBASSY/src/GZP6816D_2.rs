@@ -4,7 +4,7 @@ use core::cell::RefCell;
 use defmt::*;
 use embassy_stm32::i2c::{Error, I2c};
 use embassy_stm32::mode::Async;
-use embassy_time::{Duration, Timer};
+use embassy_time::Timer;
 use num_traits::Float;
 
 const GZP6816D_ADDRESS: u8 = 0x78; // GZP6816D sensor I2C address

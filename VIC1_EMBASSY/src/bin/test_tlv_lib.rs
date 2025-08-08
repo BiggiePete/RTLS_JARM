@@ -1,16 +1,12 @@
 #![no_std]
 #![no_main]
 
-use core::cell::RefCell;
 
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_stm32::gpio::{Level, Output, Speed};
-use embassy_stm32::i2c::I2c;
-use embassy_stm32::mode::Async;
 use embassy_stm32::mode::Blocking;
 use embassy_stm32::time::Hertz;
-use embassy_stm32::usart::{Config, Uart};
 use embassy_stm32::{bind_interrupts, i2c, peripherals};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
@@ -47,7 +43,7 @@ async fn main(spawner: Spawner) {
     let mut debugLED1 = Output::new(p.PB15, Level::High, Speed::Low);
     let mut debugLED2 = Output::new(p.PB14, Level::High, Speed::Low);
     let mut debugLED3 = Output::new(p.PB13, Level::High, Speed::Low);
-    let mut powerSelect = Output::new(p.PB12, Level::High, Speed::Low);
+    let powerSelect = Output::new(p.PB12, Level::High, Speed::Low);
 
     let mut i2c_config = embassy_stm32::i2c::Config::default();
     i2c_config.timeout = Duration::from_millis(100); // Set a 100ms timeout
@@ -82,9 +78,9 @@ async fn main(spawner: Spawner) {
 #[embassy_executor::task]
 async fn gather_data(
     i2c: embassy_stm32::i2c::I2c<'static, Blocking>,
-    mut debug_led1: Output<'static>,
-    mut debug_led2: Output<'static>,
-    mut debug_led3: Output<'static>,
+    debug_led1: Output<'static>,
+    debug_led2: Output<'static>,
+    debug_led3: Output<'static>,
 ) {
     // DEVICE_DATA.send(DataMessage::Temperature(0.0)).await
     // Use the I2C instance directly with the sensor driver

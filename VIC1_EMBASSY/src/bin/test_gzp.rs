@@ -5,7 +5,6 @@
 mod aht20;
 use core::cell::RefCell;
 
-use crate::aht20::AHT20;
 
 #[path = "../GZP6816D.rs"]
 mod gz6816d;
@@ -13,15 +12,12 @@ use crate::gz6816d::Gzp6816d;
 
 #[path = "../i2c_search.rs"]
 mod i2c_search;
-use crate::i2c_search::I2cScanner;
 
 #[path = "../TLV4930D_2.rs"]
 mod tlv4930d;
-use crate::tlv4930d::TLV493D;
 
 #[path = "../icm42688.rs"]
 mod icm42688;
-use crate::icm42688::{Icm42688p, ICM42688P_ADDR_AD0_LOW};
 
 use defmt::*;
 use embassy_executor::Spawner;
@@ -29,10 +25,7 @@ use embassy_stm32::gpio::{Level, Output, Speed};
 use embassy_stm32::i2c::I2c;
 use embassy_stm32::mode::Async;
 use embassy_stm32::time::Hertz;
-use embassy_stm32::usart::{Config, Uart};
 use embassy_stm32::{bind_interrupts, i2c, peripherals};
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use embassy_sync::channel::Channel;
 use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
 
@@ -51,7 +44,7 @@ async fn main(spawner: Spawner) {
     let mut debugLED1 = Output::new(p.PB15, Level::High, Speed::Low);
     let mut debugLED2 = Output::new(p.PB14, Level::High, Speed::Low);
     let mut debugLED3 = Output::new(p.PB13, Level::High, Speed::Low);
-    let mut powerSelect = Output::new(p.PB12, Level::High, Speed::Low);
+    let powerSelect = Output::new(p.PB12, Level::High, Speed::Low);
 
     let mut i2c_config = embassy_stm32::i2c::Config::default();
     i2c_config.timeout = Duration::from_millis(100); // Set a 100ms timeout

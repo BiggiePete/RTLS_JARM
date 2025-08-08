@@ -7,7 +7,7 @@ use crate::neo6::NeoGps;
 
 use defmt::*;
 use embassy_executor::Spawner;
-use embassy_stm32::usart::{self, Config, Uart, UartRx};
+use embassy_stm32::usart::{self, UartRx};
 use embassy_stm32::{bind_interrupts, i2c, peripherals};
 
 use {defmt_rtt as _, panic_probe as _};

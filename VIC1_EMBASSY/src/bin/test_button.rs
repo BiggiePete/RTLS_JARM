@@ -4,11 +4,9 @@
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_stm32::exti::ExtiInput;
-use embassy_stm32::gpio::{Input, Level, Output, Pull, Speed};
+use embassy_stm32::gpio::{Level, Output, Pull, Speed};
 use embassy_stm32::i2c::I2c;
-use embassy_stm32::mode::Async;
 use embassy_stm32::time::Hertz;
-use embassy_stm32::usart::{Config, Uart};
 use embassy_stm32::{bind_interrupts, i2c, peripherals};
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
