@@ -1,22 +1,13 @@
-use core::f32::MIN_POSITIVE;
-
+use crate::motor_task::{DataMessageMotors, DEVICE_MOTOR_DATA};
 use crate::{get_gps_task::DEVICE_DATA_GPS, get_i2c_task::DEVICE_DATA_I2C};
 use crate::{GLOBAL_STATE, STATE};
-use advanced_pid::{prelude::*, Pid, PidConfig, PidGain};
-use core::f64::consts::PI;
+use advanced_pid::{prelude::*, Pid, PidConfig};
 use defmt::*;
 use embassy_stm32::gpio::{Input, Output};
-use embassy_stm32::pac::i2c::vals::Pos;
-use embassy_stm32::usart::UartRx;
-use embassy_stm32::{i2c, mode::Async};
-use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
-use embassy_sync::channel::Channel;
-use embassy_time::{Duration, Instant, Timer};
-use embedded_hal::digital::v2::OutputPin;
+use embassy_time::{Instant, Timer};
 use heapless::Vec;
+use num_traits::Float;
 use num_traits::{abs, clamp};
-
-use crate::motor_task::{DataMessageMotors, DEVICE_MOTOR_DATA};
 use {defmt_rtt as _, panic_probe as _};
 
 #[macro_export]
@@ -73,12 +64,15 @@ pub async fn consume_data(
     let mut highest_alt = 0.0;
     let mut falling_count: u8 = 0;
     let mut corrected_attitude = false;
-    let mut dt = 0.0;
+    let mut dt: f32;
     let mut curr_time = Instant::now(); // get current time in seconds
 
     let mut pid_yaw = Pid::new(PidConfig::new(0.1, 0.005, 0.01).with_limits(-1.0, 1.0));
     let mut pid_pit = Pid::new(PidConfig::new(0.1, 0.005, 0.01).with_limits(-1.0, 1.0));
     let mut pid_rol = Pid::new(PidConfig::new(0.1, 0.005, 0.01).with_limits(-1.0, 1.0));
+
+    let mut pid_lat = Pid::new(PidConfig::new(0.1, 0.005, 0.01).with_limits(-1.0, 1.0));
+    let mut pid_lon = Pid::new(PidConfig::new(0.1, 0.005, 0.01).with_limits(-1.0, 1.0));
 
     loop {
         let mut consumer_obj = ConsumerObject {
@@ -250,10 +244,10 @@ pub async fn consume_data(
                     let yaw_drive = pid_yaw.update(180.0, consumer_obj.direction, dt);
 
                     // TODO: add controls for shifting the pitch and yaw drive requirements based on lat and long
-                    let diff = (
-                        consumer_obj.lat_lon_alt.0 - gps_home.0, // difference between where we are and where we need to be
-                        consumer_obj.lat_lon_alt.1 - gps_home.1, // difference between where we are and where we need to be
-                    );
+                    // TODO: vary the amount the lat and lon can effect the output based on sin and cos of the angle
+                    let lat_drive = (pid_lat.update(gps_home.0, consumer_obj.lat_lon_alt.0, dt)); //positive = moving north
+                    let lon_drive =
+                        pid_lon.update(gps_home.1, consumer_obj.lat_lon_alt.1, dt) * -1.0; //positive = moving east
 
                     // place motor drives in the 1st quadrant, and apply force as necessary
                     match DEVICE_MOTOR_DATA.try_send(DataMessageMotors {

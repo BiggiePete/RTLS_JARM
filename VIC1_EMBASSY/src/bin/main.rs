@@ -3,37 +3,28 @@
 
 #[path = "../aht20.rs"]
 mod aht20;
-use crate::aht20::AHT20;
 
 #[path = "../icm42688.rs"]
 mod icm42688;
-use crate::icm42688::{Icm42688p, ICM42688P_ADDR_AD0_LOW};
 
 #[path = "../inertial_navigator3.rs"]
 mod inertial;
-use crate::inertial::{CalibrationState, InertialNavigator, Vec3};
 
 #[path = "../gy271.rs"]
 mod gy271;
-use crate::gy271::GY271;
 
-use core::cell::RefCell;
-use core::f64::consts::PI;
 
 use defmt::*;
 use embassy_executor::Spawner;
 use embassy_stm32::gpio::{Input, Level, Output, OutputType, Pull, Speed};
 use embassy_stm32::i2c::I2c;
-use embassy_stm32::mode::Async;
 use embassy_stm32::time::{hz, Hertz};
 use embassy_stm32::timer::simple_pwm::{PwmPin, SimplePwm};
 use embassy_stm32::usart::UartRx;
 use embassy_stm32::{bind_interrupts, i2c, peripherals, usart};
 use embassy_sync::blocking_mutex::raw::ThreadModeRawMutex;
-use embassy_sync::channel::Channel;
 use embassy_sync::mutex::Mutex;
-use embassy_time::{Duration, Instant, Timer};
-use libm::atan2;
+use embassy_time::{Duration, Timer};
 use {defmt_rtt as _, panic_probe as _};
 
 #[path = "./tasks/get_i2c_task.rs"]

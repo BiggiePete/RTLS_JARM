@@ -1,7 +1,5 @@
 #![no_std]
 
-use defmt::println;
-use libm::{atan2f, cosf, fabsf, sinf, sqrtf};
 
 // --- Unit Conversion Constants ---
 const G_TO_MS2: f64 = 9.80665;

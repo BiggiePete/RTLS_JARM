@@ -10,7 +10,7 @@ use embassy_stm32::i2c::I2c;
 use embassy_stm32::mode::Async;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
-use embassy_time::{Instant, Timer};
+use embassy_time::Instant;
 use libm::atan2;
 use {defmt_rtt as _, panic_probe as _};
 
@@ -55,7 +55,7 @@ pub async fn gather_i2c_data(i2c: embassy_stm32::i2c::I2c<'static, Async>) {
     info!("I2C devices initialized.");
 
     let mut curr_time = Instant::now(); // get current time in seconds
-    let mut dt = 0 as f64; // init var
+    let mut dt: f64; // init var
 
     let mut nav = InertialNavigator::new();
 

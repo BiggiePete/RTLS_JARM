@@ -1,9 +1,9 @@
 #![no_std] // Assuming this is for an embedded target
 
-use embassy_stm32::dma::NoDma; // Default DMA type
+ // Default DMA type
 use embassy_stm32::mode::Async;
 use embassy_stm32::usart::{Error as UartError, UartRx};
-use embassy_time::{Duration, TimeoutError, Timer};
+use embassy_time::{Duration, TimeoutError};
 
 use core::str;
 use defmt::*; // For logging, optional but helpful

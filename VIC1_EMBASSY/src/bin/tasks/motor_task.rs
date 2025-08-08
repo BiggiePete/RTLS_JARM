@@ -1,9 +1,9 @@
 use crate::{GLOBAL_STATE, STATE};
 use defmt::*;
-use embassy_stm32::{mode::Async, timer::simple_pwm::SimplePwm};
+use embassy_stm32::timer::simple_pwm::SimplePwm;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
-use embassy_time::{Duration, Timer};
+use embassy_time::Timer;
 
 use {defmt_rtt as _, panic_probe as _};
 
@@ -125,7 +125,7 @@ pub async fn motor_operation_task(pwm: SimplePwm<'static, embassy_stm32::periphe
                         break;
                     }
                 }
-                Err(e) => {
+                Err(_e) => {
                     warn!("Failed to lock state")
                 }
             }
