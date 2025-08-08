@@ -14,7 +14,7 @@ use embassy_sync::channel::Channel;
 use embassy_time::{Duration, Instant, Timer};
 use embedded_hal::digital::v2::OutputPin;
 use heapless::Vec;
-use num_traits::abs;
+use num_traits::{abs, clamp};
 
 use crate::motor_task::{DataMessageMotors, DEVICE_MOTOR_DATA};
 use {defmt_rtt as _, panic_probe as _};
@@ -248,19 +248,39 @@ pub async fn consume_data(
                     let pitch_drive = pid_pit.update(0.0, consumer_obj.rotation.0 as f32, dt);
                     let roll_drive = pid_rol.update(0.0, consumer_obj.rotation.1 as f32, dt);
                     let yaw_drive = pid_yaw.update(180.0, consumer_obj.direction, dt);
+
+                    // TODO: add controls for shifting the pitch and yaw drive requirements based on lat and long
+                    let diff = (
+                        consumer_obj.lat_lon_alt.0 - gps_home.0, // difference between where we are and where we need to be
+                        consumer_obj.lat_lon_alt.1 - gps_home.1, // difference between where we are and where we need to be
+                    );
+
                     // place motor drives in the 1st quadrant, and apply force as necessary
                     match DEVICE_MOTOR_DATA.try_send(DataMessageMotors {
-                        motor1frac100: ((0.3 + (pitch_drive + roll_drive) * 0.25 + yaw_drive * 0.1)
-                            * 100.0) as u8,
-                        motor2frac100: ((0.3 + (pitch_drive - roll_drive) * 0.25 - yaw_drive * 0.1)
-                            * 100.0) as u8,
-                        motor3frac100: ((0.3 + ((pitch_drive * -1.0) + roll_drive) * 0.25
-                            - yaw_drive * 0.1)
-                            * 100.0) as u8,
-                        motor4frac100: ((0.3
-                            + ((pitch_drive * -1.0) - roll_drive) * 0.25
-                            + yaw_drive * 0.1)
-                            * 100.0) as u8,
+                        motor1frac100: clamp(
+                            ((0.3 + (pitch_drive + roll_drive) * 0.25 + yaw_drive * 0.1) * 100.0)
+                                as u8,
+                            0,
+                            100,
+                        ),
+                        motor2frac100: clamp(
+                            ((0.3 + (pitch_drive - roll_drive) * 0.25 - yaw_drive * 0.1) * 100.0)
+                                as u8,
+                            0,
+                            100,
+                        ),
+                        motor3frac100: clamp(
+                            ((0.3 + ((pitch_drive * -1.0) + roll_drive) * 0.25 - yaw_drive * 0.1)
+                                * 100.0) as u8,
+                            0,
+                            100,
+                        ),
+                        motor4frac100: clamp(
+                            ((0.3 + ((pitch_drive * -1.0) - roll_drive) * 0.25 + yaw_drive * 0.1)
+                                * 100.0) as u8,
+                            0,
+                            100,
+                        ),
                     }) {
                         Ok(_) => {
                             trace!("Successfully updated MOTORS")
