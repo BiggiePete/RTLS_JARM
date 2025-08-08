@@ -6,7 +6,6 @@ use defmt::*;
 use embassy_stm32::gpio::{Input, Output};
 use embassy_time::{Instant, Timer};
 use heapless::Vec;
-use num_traits::Float;
 use num_traits::{abs, clamp};
 use {defmt_rtt as _, panic_probe as _};
 
@@ -245,7 +244,7 @@ pub async fn consume_data(
 
                     // TODO: add controls for shifting the pitch and yaw drive requirements based on lat and long
                     // TODO: vary the amount the lat and lon can effect the output based on sin and cos of the angle
-                    let lat_drive = (pid_lat.update(gps_home.0, consumer_obj.lat_lon_alt.0, dt)); //positive = moving north
+                    let lat_drive = pid_lat.update(gps_home.0, consumer_obj.lat_lon_alt.0, dt); //positive = moving north
                     let lon_drive =
                         pid_lon.update(gps_home.1, consumer_obj.lat_lon_alt.1, dt) * -1.0; //positive = moving east
 
