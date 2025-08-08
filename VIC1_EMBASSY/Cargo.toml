@@ -78,8 +78,15 @@ features = [
   "libm",
 ] # <--- Uncomment if you wish to use `Float` and `Real` without `std`
 
+[profile.dev]
+debug = 2
+opt-level = 3
+
 [profile.release]
 debug = 2
+opt-level = 3
+# strip = "debuginfo"
+lto = "fat" # experiment to see if this helps at all
 
 
 [[bin]]
