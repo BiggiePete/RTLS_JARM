@@ -9,15 +9,6 @@ use embassy_time::Timer;
 use heapless::String;
 use {defmt_rtt as _, panic_probe as _};
 
-// The frequency for standard servos is 50 Hz
-const SERVO_FREQ_HZ: u32 = 50;
-// The period in microseconds is 1 / 50Hz = 0.02s = 20,000 µs
-const SERVO_PERIOD_MICROS: u32 = 1_000_000 / SERVO_FREQ_HZ;
-
-// Standard servo pulse widths in microseconds
-const SERVO_MIN_PULSE_MICROS: u32 = 1000; // Corresponds to 0 degrees
-const SERVO_MAX_PULSE_MICROS: u32 = 2000; // Corresponds to 180 degrees
-
 pub static LORA_MESSAGE: Channel<CriticalSectionRawMutex, String<200>, 2> = Channel::new();
 
 #[embassy_executor::task]
@@ -28,11 +19,6 @@ pub async fn lora_tx(
     pwm: SimplePwm<'static, embassy_stm32::peripherals::TIM3>,
 ) {
     trace!("Setting up LoRa Skynet0");
-    let max_duty = pwm.max_duty_cycle();
-    let min_duty =
-        (max_duty as u64 * SERVO_MIN_PULSE_MICROS as u64 / SERVO_PERIOD_MICROS as u64) as u16;
-    let max_duty_val =
-        (max_duty as u64 * SERVO_MAX_PULSE_MICROS as u64 / SERVO_PERIOD_MICROS as u64) as u16;
 
     let channels = pwm.split();
     let mut servo1 = channels.ch1;

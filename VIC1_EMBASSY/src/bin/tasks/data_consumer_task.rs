@@ -3,7 +3,6 @@ use crate::motor_task::{DataMessageMotors, DEVICE_MOTOR_DATA};
 use crate::{get_gps_task::DEVICE_DATA_GPS, get_i2c_task::DEVICE_DATA_I2C};
 use crate::{GLOBAL_STATE, STATE};
 use advanced_pid::{prelude::*, Pid, PidConfig};
-use core::fmt::Write;
 use defmt::*;
 use embassy_stm32::gpio::{Input, Output};
 use embassy_time::{Instant, Timer};
