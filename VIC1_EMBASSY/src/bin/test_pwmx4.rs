@@ -23,7 +23,7 @@ async fn main(_spawner: Spawner) {
 
     let mut debug_led1 = Output::new(p.PB15, Level::High, Speed::Low);
     let mut debug_led2 = Output::new(p.PB14, Level::High, Speed::Low);
-    let mut debug_led3 = Output::new(p.PB13, Level::High, Speed::Low);
+    let debug_led3 = Output::new(p.PB13, Level::High, Speed::Low);
 
     let _power_select = Output::new(p.PB12, Level::High, Speed::Low);
     let button = Input::new(p.PC8, Pull::Up);

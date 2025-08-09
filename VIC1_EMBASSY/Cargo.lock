@@ -3,6 +3,51 @@
 version = 4
 
 [[package]]
+name = "RTLS-JARM"
+version = "1.0.0"
+dependencies = [
+ "advanced-pid",
+ "chrono",
+ "cortex-m",
+ "cortex-m-rt",
+ "critical-section",
+ "defmt 1.0.1",
+ "defmt-rtt",
+ "defmt-test",
+ "embassy-executor",
+ "embassy-futures",
+ "embassy-net",
+ "embassy-net-wiznet",
+ "embassy-stm32",
+ "embassy-sync 0.7.0",
+ "embassy-time",
+ "embassy-usb",
+ "embedded-hal 0.2.7",
+ "embedded-hal-bus",
+ "embedded-io",
+ "embedded-io-async",
+ "embedded-storage",
+ "futures-util",
+ "heapless",
+ "libm",
+ "micromath",
+ "nb 1.1.0",
+ "num-traits",
+ "panic-probe",
+ "qmc5883l",
+ "ryu",
+ "sensor-tlv493d",
+ "static_cell",
+ "usbd-hid",
+]
+
+[[package]]
+name = "advanced-pid"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "986177142ac2ef4b1016d51129475d740c2826e0192900eaee2a592d23118ba1"
+
+[[package]]
 name = "ahash"
 version = "0.8.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -433,43 +478,6 @@ dependencies = [
  "stm32-metapac",
  "vcell",
  "volatile-register",
-]
-
-[[package]]
-name = "embassy-stm32f4-examples"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "cortex-m",
- "cortex-m-rt",
- "critical-section",
- "defmt 1.0.1",
- "defmt-rtt",
- "defmt-test",
- "embassy-executor",
- "embassy-futures",
- "embassy-net",
- "embassy-net-wiznet",
- "embassy-stm32",
- "embassy-sync 0.7.0",
- "embassy-time",
- "embassy-usb",
- "embedded-hal 0.2.7",
- "embedded-hal-bus",
- "embedded-io",
- "embedded-io-async",
- "embedded-storage",
- "futures-util",
- "heapless",
- "libm",
- "micromath",
- "nb 1.1.0",
- "num-traits",
- "panic-probe",
- "qmc5883l",
- "sensor-tlv493d",
- "static_cell",
- "usbd-hid",
 ]
 
 [[package]]
@@ -913,6 +921,12 @@ checksum = "138e3e0acb6c9fb258b19b67cb8abd63c00679d2851805ea151465464fe9030a"
 dependencies = [
  "semver",
 ]
+
+[[package]]
+name = "ryu"
+version = "1.0.20"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "28d3b2b1366ec20994f1fd18c3c594f05c5dd4bc44d8bb0c1c632c8d6829481f"
 
 [[package]]
 name = "sdio-host"

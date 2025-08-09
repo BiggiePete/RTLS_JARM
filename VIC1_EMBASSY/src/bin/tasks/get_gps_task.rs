@@ -2,15 +2,12 @@
 mod neo6;
 use crate::get_gps_task::neo6::NeoGps;
 
-#[path = "./led_task.rs"]
-mod led_task;
-
 use defmt::*;
 use embassy_stm32::mode::Async;
 use embassy_stm32::usart::UartRx;
 use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
-use embassy_time::{Duration, Timer};
+use embassy_time::Timer;
 
 use {defmt_rtt as _, panic_probe as _};
 
@@ -18,7 +15,7 @@ use {defmt_rtt as _, panic_probe as _};
 pub(crate) struct DataMessageGPS {
     pub(crate) latitude: f32,
     pub(crate) longitude: f32,
-    pub(crate) altitude: f32,
+    pub(crate) altitude: f32, // this is in meters
     pub(crate) gps_ready: bool,
 }
 

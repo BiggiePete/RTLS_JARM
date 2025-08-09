@@ -1,7 +1,6 @@
 #![no_std]
 
 use defmt::println;
-use libm::{atan2f, cosf, fabsf, sinf, sqrtf};
 
 /// High-precision 3D vector using f64 for maximum precision
 #[derive(Clone, Copy, Debug)]

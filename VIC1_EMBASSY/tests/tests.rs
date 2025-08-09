@@ -35,3 +35,5 @@ mod tests {
         // ...
     }
 }
+
+fn main() {}
