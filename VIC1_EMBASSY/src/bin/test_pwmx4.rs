@@ -129,12 +129,15 @@ async fn main(_spawner: Spawner) {
             break;
         }
     }
+
+    let throttle_percentage = 15;
     // --- Spin motor up to 10% throttle ---
-    info!("Spinning motor to 10% throttle...");
+    info!("Spinning motor to {}% throttle...", throttle_percentage);
 
     // Calculate 10% of the throttle range
     let throttle_range = max_throttle_duty - min_throttle_duty;
-    let ten_percent_throttle = min_throttle_duty + (throttle_range as u32 * 10 / 100) as u16;
+    let ten_percent_throttle =
+        min_throttle_duty + (throttle_range as u32 * throttle_percentage / 100) as u16;
 
     motor1.set_duty_cycle(ten_percent_throttle);
     motor2.set_duty_cycle(ten_percent_throttle);
